@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Subscription - Traders Impulse{% endblock %}
+
+{% block head %}
+<style>
+    body {
+        background-color: #131313;
+    }
+
+    .price-card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        height: 100%;
+        transition: all 0.3s;
+        padding: 25px; /* Added padding to price cards */
+    }
+
+    .price-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-header {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px 12px 0 0 !important;
+        padding: 20px; /* Added more padding to card headers */
+    }
+
+    .card-body {
+        padding: 25px; /* Added more padding to card bodies */
+    }
+
+    .feature-check {
+        color: #198754;
+        margin-right: 8px;
+    }
+
+    .plan-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+
+    .billing-toggle {
+        background-color: #1a1a1a;
+        border-radius: 30px;
+        padding: 5px;
+        display: inline-flex;
+        margin-bottom: 20px;
+    }
+
+    .billing-toggle-btn {
+        padding: 8px 16px;
+        border-radius: 30px;
+        border: none;
+        background: transparent;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    .billing-toggle-btn.active {
+        background-color: #2196F3;
+    }
+
+    .save-badge {
+        background-color: #dc3545;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+    }
+
+    .modal-content {
+        background-color: #1a1a1a;
+        color: #fff;
+    }
+
+    /* Added more spacing for price display */
+    .price-monthly, .price-annual {
+        padding: 15px 0;
+    }
+
+    /* Additional spacing for features list */
+    .list-unstyled {
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    .list-unstyled li {
+        padding: 8px 0;
+    }
+
+    /* Better spacing for subscription button */
+    .d-grid.mt-4 {
+        margin-top: 30px !important;
+    }
+
+    .btn {
+        padding: 10px 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Subscription Management</h1>
+    </div>
+</div>
+
+{% if subscription %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary">
+                <h5 class="card-title mb-0">Current Subscription</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">{{ subscription.plan_name }} Plan</h5>
+                        <p><strong>Status:</strong>
+                            <span class="badge {% if subscription.status == 'active' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ subscription.status|capitalize }}
+                            </span>
+                        </p>
+                        <p><strong>Trading Accounts:</strong> {{ subscription.max_accounts_allowed }}</p>
+                        {% if subscription.current_period_end %}
+                        <p><strong>Renewal Date:</strong> {{ subscription.current_period_end.strftime('%Y-%m-%d') }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if subscription.cancel_at_period_end %}
+                        <div class="alert alert-warning">
+                            <h5 class="alert-heading">Cancellation Scheduled</h5>
+                            <p>Your subscription is set to cancel at the end of the current billing period. You'll still have access until {{ subscription.current_period_end.strftime('%Y-%m-%d') }}.</p>
+                            <hr>
+                            <button id="resume-subscription" class="btn btn-success">Resume Subscription</button>
+                        </div>
+                        {% else %}
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('cancel_subscription') }}" class="btn btn-outline-danger">Cancel Subscription</a>
+                            <button class="btn btn-outline-primary" id="change-plan-btn">Change Plan</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row" id="plans-section" {% if subscription and not subscription.cancel_at_period_end %}style="display: none;"{% endif %}>
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-center mb-3">
+            <div class="billing-toggle">
+                <button class="billing-toggle-btn active" id="monthly-toggle">Monthly</button>
+                <button class="billing-toggle-btn" id="annual-toggle">Annual <span class="save-badge">Save 20%</span></button>
+            </div>
+        </div>
+    </div>
+
+    {% for plan in plans %}
+    <div class="col-md-6 mb-4">
+        <div class="price-card">
+            {% if subscription and subscription.plan_id == plan.id %}
+            <span class="badge bg-success plan-badge">Current Plan</span>
+            {% endif %}
+            <div class="text-center">
+                <h3 class="mb-4">{{ plan.name }}</h3>
+
+                <div class="price-monthly">
+                    <h2 class="display-4">${{ plan.monthly_cost }}</h2>
+                    <p class="text-muted">per month</p>
+                </div>
+                <div class="price-annual" style="display:none;">
+                    <h2 class="display-4">${{ plan.annual_cost }}</h2>
+                    <p class="text-muted">per month, billed annually</p>
+                </div>
+            </div>
+
+            <ul class="list-unstyled">
+                <li class="mb-2"><span class="feature-check">✓</span> Up to {{ plan.max_accounts_allowed }} trading accounts</li>
+                <li class="mb-2"><span class="feature-check">✓</span> Full access to all trading controls</li>
+                <li class="mb-2"><span class="feature-check">✓</span> Customizable lockout periods</li>
+                <li class="mb-2"><span class="feature-check">✓</span> Account statistics</li>
+                {% if plan.max_accounts_allowed > 1 %}
+                <li class="mb-2"><span class="feature-check">✓</span> Multi-account support</li>
+                {% endif %}
+            </ul>
+
+            <div class="d-grid mt-4">
+                {% if subscription and subscription.plan_id == plan.id %}
+                <button class="btn btn-secondary" disabled>Current Plan</button>
+                {% else %}
+                <button class="btn btn-primary subscribe-btn"
+                        data-plan-id="{{ plan.id }}"
+                        data-monthly-price-id="{{ plan.stripe_monthly_price_id }}"
+                        data-annual-price-id="{{ plan.stripe_annual_price_id }}">
+                    {% if subscription %}Upgrade to{% else %}Select{% endif %} {{ plan.name }}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Processing payment...</h5>
+                <p class="text-muted">Please do not close this window.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    $(document).ready(function() {
+        const stripe = Stripe('{{ stripe_public_key }}');
+        let isAnnual = false;
+
+        // Toggle between monthly and annual billing
+        $('#monthly-toggle').click(function() {
+            $(this).addClass('active');
+            $('#annual-toggle').removeClass('active');
+            $('.price-monthly').show();
+            $('.price-annual').hide();
+            isAnnual = false;
+        });
+
+        $('#annual-toggle').click(function() {
+            $(this).addClass('active');
+            $('#monthly-toggle').removeClass('active');
+            $('.price-monthly').hide();
+            $('.price-annual').show();
+            isAnnual = true;
+        });
+
+        // Show plans section when change plan button is clicked
+        $('#change-plan-btn').click(function() {
+            $('#plans-section').slideDown();
+            $('html, body').animate({
+                scrollTop: $('#plans-section').offset().top
+            }, 500);
+        });
+
+        // Handle subscription button click
+        $('.subscribe-btn').click(function() {
+            const planId = $(this).data('plan-id');
+
+            // Show loading modal
+            $('#loadingModal').modal('show');
+
+            // Create checkout session
+            $.ajax({
+                url: '/create-checkout-session',
+                type: 'POST',
+                data: {
+                    plan_id: planId,
+                    is_annual: isAnnual
+                },
+                success: function(result) {
+                    // Redirect to Stripe Checkout
+                    stripe.redirectToCheckout({
+                        sessionId: result.id
+                    }).then(function (result) {
+                        // If redirection fails, show the error
+                        $('#loadingModal').modal('hide');
+                        alert(result.error.message);
+                    });
+                },
+                error: function(xhr, status, error) {
+                    $('#loadingModal').modal('hide');
+                    alert('Error creating checkout session: ' + error);
+                }
+            });
+        });
+
+        // Handle resume subscription button
+        $('#resume-subscription').click(function() {
+            $.ajax({
+                url: '/subscription/resume',
+                type: 'POST',
+                success: function(result) {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Error resuming subscription: ' + result.error);
+                    }
+                },
+                error: function() {
+                    alert('Error connecting to server. Please try again.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

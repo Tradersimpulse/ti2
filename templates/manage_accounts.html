@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Accounts - Traders Impulse{% endblock %}
+
+{% block head %}
+<style>
+    body {
+        background-color: #131313;
+    }
+
+    .card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+    }
+
+    .card-header {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px 12px 0 0 !important;
+        padding: 16px 20px;
+    }
+
+    .card-title {
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .form-control, .form-select {
+        background-color: #242424;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #fff;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #2c2c2c;
+        color: #fff;
+        border-color: #4389ff;
+        box-shadow: 0 0 0 0.25rem rgba(67, 137, 255, 0.25);
+    }
+
+    .table-dark {
+        background-color: transparent;
+    }
+
+    .btn-primary {
+        background-color: #4389ff;
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background-color: #2d73e8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Manage Trading Accounts</h1>
+    </div>
+</div>
+
+{% if error_message %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card bg-dark border-secondary mb-4">
+            <div class="card-header border-secondary">
+                <h5 class="card-title mb-0">Your Trading Accounts</h5>
+            </div>
+            <div class="card-body">
+                {% if current_user.accounts %}
+                <table class="table table-dark table-hover">
+                    <thead>
+                        <tr>
+                            <th>Account ID</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account_id in current_user.accounts %}
+                        <tr>
+                            <td>{{ account_id }}</td>
+                            <td>
+                                {% if account_id == current_user.current_account_id %}
+                                <span class="badge bg-primary">Current</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" class="d-inline">
+                                    <input type="hidden" name="action" value="set_default">
+                                    <input type="hidden" name="account_id" value="{{ account_id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Set Default</button>
+                                </form>
+
+                                {% if current_user.accounts|length > 1 %}
+                                <form method="post" class="d-inline">
+                                    <input type="hidden" name="action" value="remove">
+                                    <input type="hidden" name="account_id" value="{{ account_id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('Are you sure you want to remove this account?')">
+                                        Remove
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">No accounts connected yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+
+<!-- TradeLocker Integration -->
+<div class="row mt-2">
+    <div class="col-12">
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary">
+                <h5 class="card-title mb-0">
+                    <span class="material-symbols-outlined align-middle me-2">sync_alt</span>
+                    Connect with TradeLocker
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- TradeLocker credentials form -->
+                    <div class="col-md-5 {% if tradelocker_accounts %}border-end border-secondary{% endif %}">
+                        <form method="post">
+                            <input type="hidden" name="action" value="connect_tradelocker">
+
+                            <div class="mb-3">
+                                <label for="account_type" class="form-label">Account Type</label>
+                                <select class="form-select bg-dark text-light border-secondary" id="account_type" name="account_type" required>
+                                    <option value="demo">Demo</option>
+                                    <option value="live">Live</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email address</label>
+                                <input type="email" class="form-control bg-dark text-light border-secondary" id="email" name="email" placeholder="Type here..." required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control bg-dark text-light border-secondary" id="password" name="password" placeholder="Type here..." required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="server" class="form-label">Server</label>
+                                <input type="text" class="form-control bg-dark text-light border-secondary" id="server" name="server" placeholder="Type here...">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <span class="material-symbols-outlined align-middle me-2">account_balance</span>
+                                Connect to TradeLocker
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- TradeLocker accounts selection -->
+                    {% if tradelocker_accounts %}
+                    <div class="col-md-7">
+                        <h5 class="mb-3">Select accounts to add</h5>
+                        <form method="post">
+                            <input type="hidden" name="action" value="add_tradelocker_accounts">
+
+                            <div class="mb-3">
+                                {% for account in tradelocker_accounts %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="selected_accounts" value="{{ account.id }}" id="account_{{ account.id }}">
+                                    <label class="form-check-label" for="account_{{ account.id }}">
+                                        {{ account.id }} {% if account.label %}- {{ account.label }}{% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <button type="submit" class="btn btn-success">
+                                <span class="material-symbols-outlined align-middle me-2">add_circle</span>
+                                Add Selected Accounts
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

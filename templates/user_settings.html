@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block title %}User Settings - Traders Impulse{% endblock %}
+
+{% block head %}
+<style>
+    body {
+        background-color: #131313;
+    }
+
+    .card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        margin-bottom: 25px;
+    }
+
+    .card-header {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px;
+        border-radius: 12px 12px 0 0 !important;
+    }
+
+    .card-body {
+        padding: 25px;
+    }
+
+    .settings-section {
+        margin-bottom: 2.5rem;
+    }
+
+    .settings-section h3 {
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #444;
+        padding-bottom: 0.75rem;
+    }
+
+    .form-control, .form-select {
+        background-color: #242424;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #fff;
+        padding: 12px 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #2c2c2c;
+        color: #fff;
+        border-color: #4389ff;
+        box-shadow: 0 0 0 0.25rem rgba(67, 137, 255, 0.25);
+    }
+
+    .timezone-select {
+        background-color: #242424;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .timezone-select option {
+        background-color: #242424;
+        color: #fff;
+    }
+
+    .save-btn {
+        background-color: #4389ff;
+        color: white;
+        border: none;
+        transition: background-color 0.3s;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    .save-btn:hover {
+        background-color: #2d73e8;
+    }
+
+    .nav-tabs {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-tabs .nav-link {
+        color: #adb5bd;
+        background-color: transparent;
+        border-color: transparent;
+        padding: 12px 20px;
+        font-weight: 500;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: #fff;
+        border-color: transparent;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #fff;
+        background-color: transparent;
+        border-color: transparent transparent #4389ff;
+    }
+
+    .alert {
+        border-radius: 8px;
+        padding: 12px 20px;
+    }
+
+    .modal-content {
+        background-color: #1a1a1a;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px;
+    }
+
+    .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px;
+    }
+
+    .btn-close-white {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    .form-check-input {
+        background-color: #242424;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .form-check-input:checked {
+        background-color: #4389ff;
+        border-color: #4389ff;
+    }
+
+    .form-label {
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">User Settings</h1>
+    </div>
+</div>
+
+{% if error_message %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-header border-secondary">
+        <ul class="nav nav-tabs card-header-tabs" id="settings-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">Profile</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="timezone-tab" data-bs-toggle="tab" data-bs-target="#timezone" type="button" role="tab">Timezone</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">Notifications</button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="settings-content">
+            <!-- Profile Settings Tab -->
+            <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                <div class="settings-section">
+                    <h3>Profile Information</h3>
+                    <form method="post" action="{{ url_for('user_settings') }}">
+                        <input type="hidden" name="action" value="update_profile">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="username" name="username" value="{{ user_data.username }}" readonly>
+                            <small class="text-muted">Username cannot be changed</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fullname" class="form-label">Full Name</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="fullname" name="fullname" value="{{ user_data.fullname }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email address</label>
+                            <input type="email" class="form-control bg-dark text-light border-secondary" id="email" name="email" value="{{ user_data.email }}">
+                        </div>
+                        <button type="submit" class="btn save-btn">Save Profile</button>
+                    </form>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Password</h3>
+                    <form method="post" action="{{ url_for('user_settings') }}">
+                        <input type="hidden" name="action" value="change_password">
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control bg-dark text-light border-secondary" id="current_password" name="current_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control bg-dark text-light border-secondary" id="new_password" name="new_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control bg-dark text-light border-secondary" id="confirm_password" name="confirm_password" required>
+                        </div>
+                        <button type="submit" class="btn save-btn">Change Password</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Timezone Settings Tab -->
+            <div class="tab-pane fade" id="timezone" role="tabpanel" aria-labelledby="timezone-tab">
+                <div class="settings-section">
+                    <h3>Timezone Settings</h3>
+                    <p class="text-muted mb-4">Your timezone is used to determine trading windows and when daily/weekly limits are reset.</p>
+
+                    <form method="post" action="{{ url_for('user_settings') }}">
+                        <input type="hidden" name="action" value="update_timezone">
+                        <div class="mb-4">
+                            <label for="timezone" class="form-label">Select Your Timezone</label>
+                            <select class="form-select timezone-select" id="timezone" name="timezone">
+                                <option value="UTC" {% if user_data.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+                                <optgroup label="North America">
+                                    <option value="America/New_York" {% if user_data.timezone == 'America/New_York' %}selected{% endif %}>Eastern Time (US & Canada)</option>
+                                    <option value="America/Chicago" {% if user_data.timezone == 'America/Chicago' %}selected{% endif %}>Central Time (US & Canada)</option>
+                                    <option value="America/Denver" {% if user_data.timezone == 'America/Denver' %}selected{% endif %}>Mountain Time (US & Canada)</option>
+                                    <option value="America/Los_Angeles" {% if user_data.timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time (US & Canada)</option>
+                                </optgroup>
+                                <optgroup label="Europe">
+                                    <option value="Europe/London" {% if user_data.timezone == 'Europe/London' %}selected{% endif %}>London</option>
+                                    <option value="Europe/Paris" {% if user_data.timezone == 'Europe/Paris' %}selected{% endif %}>Paris</option>
+                                    <option value="Europe/Berlin" {% if user_data.timezone == 'Europe/Berlin' %}selected{% endif %}>Berlin</option>
+                                    <option value="Europe/Moscow" {% if user_data.timezone == 'Europe/Moscow' %}selected{% endif %}>Moscow</option>
+                                </optgroup>
+                                <optgroup label="Asia">
+                                    <option value="Asia/Dubai" {% if user_data.timezone == 'Asia/Dubai' %}selected{% endif %}>Dubai</option>
+                                    <option value="Asia/Shanghai" {% if user_data.timezone == 'Asia/Shanghai' %}selected{% endif %}>Shanghai</option>
+                                    <option value="Asia/Tokyo" {% if user_data.timezone == 'Asia/Tokyo' %}selected{% endif %}>Tokyo</option>
+                                    <option value="Asia/Singapore" {% if user_data.timezone == 'Asia/Singapore' %}selected{% endif %}>Singapore</option>
+                                </optgroup>
+                                <optgroup label="Australia">
+                                    <option value="Australia/Sydney" {% if user_data.timezone == 'Australia/Sydney' %}selected{% endif %}>Sydney</option>
+                                    <option value="Australia/Melbourne" {% if user_data.timezone == 'Australia/Melbourne' %}selected{% endif %}>Melbourne</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info mb-4">
+                            <p class="mb-0"><strong>Current server time:</strong> <span id="server-time"></span></p>
+                            <p class="mb-0"><strong>Your local time:</strong> <span id="local-time"></span></p>
+                        </div>
+
+                        <button type="submit" class="btn save-btn">Save Timezone Settings</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Notifications Settings Tab -->
+            <div class="tab-pane fade" id="notifications" role="tabpanel" aria-labelledby="notifications-tab">
+                <div class="settings-section">
+                    <h3>Discord Notifications</h3>
+                    <p class="text-muted mb-4">Receive trading alerts and updates via Discord.</p>
+
+                    <form method="post" action="{{ url_for('user_settings') }}">
+                        <input type="hidden" name="action" value="update_discord_webhook">
+                        <div class="mb-4">
+                            <label for="discord_webhook" class="form-label">Discord Webhook URL</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="discord_webhook" name="discord_webhook" value="{{ user_data.discord_webhook }}" placeholder="https://discord.com/api/webhooks/...">
+                            <small class="text-muted">Enter your Discord webhook URL to receive notifications. <a href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank">Learn how to create a webhook</a></small>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="notify_trade_closed" name="notify_trade_closed" {% if user_data.notify_trade_closed %}checked{% endif %}>
+                                <label class="form-check-label" for="notify_trade_closed">
+                                    Notify when trades are closed
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="notify_limit_reached" name="notify_limit_reached" {% if user_data.notify_limit_reached %}checked{% endif %}>
+                                <label class="form-check-label" for="notify_limit_reached">
+                                    Notify when a trading limit is reached
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="notify_daily_summary" name="notify_daily_summary" {% if user_data.notify_daily_summary %}checked{% endif %}>
+                                <label class="form-check-label" for="notify_daily_summary">
+                                    Receive daily trading summary
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn save-btn">Save Notification Settings</button>
+
+                        <div class="mt-4">
+                            <button type="button" id="test-webhook" class="btn btn-outline-secondary">Test Webhook</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Danger Zone -->
+<div class="card bg-dark border-danger mb-4">
+    <div class="card-header bg-danger bg-opacity-25 text-white">
+        <h5 class="mb-0">Danger Zone</h5>
+    </div>
+    <div class="card-body">
+        <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+            Delete Account
+        </button>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.
+                </div>
+                <p>Please type "<strong>DELETE</strong>" to confirm:</p>
+                <input type="text" class="form-control bg-dark text-light border-secondary" id="delete-confirmation">
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{{ url_for('user_settings') }}">
+                    <input type="hidden" name="action" value="delete_account">
+                    <button type="submit" id="confirm-delete-btn" class="btn btn-danger" disabled>Delete Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Update server time
+        function updateServerTime() {
+            const serverTime = new Date("{{ server_time }}");
+            $('#server-time').text(serverTime.toLocaleString());
+        }
+
+        // Update local time
+        function updateLocalTime() {
+            const localTime = new Date();
+            $('#local-time').text(localTime.toLocaleString());
+        }
+
+        // Initialize time displays
+        updateServerTime();
+        updateLocalTime();
+
+        // Update times every second
+        setInterval(function() {
+            updateLocalTime();
+        }, 1000);
+
+        // Enable/disable delete button based on confirmation text
+        $('#delete-confirmation').on('input', function() {
+            const confirmText = $(this).val();
+            $('#confirm-delete-btn').prop('disabled', confirmText !== 'DELETE');
+        });
+
+        // Test Discord webhook
+        $('#test-webhook').click(function() {
+            const webhookUrl = $('#discord_webhook').val();
+
+            if (!webhookUrl) {
+                alert('Please enter a Discord webhook URL first.');
+                return;
+            }
+
+            $.ajax({
+                url: "{{ url_for('test_discord_webhook') }}",
+                type: 'POST',
+                data: {
+                    webhook_url: webhookUrl
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Test message sent successfully! Check your Discord channel.');
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function() {
+                    alert('Error sending test message. Please check your webhook URL and try again.');
+                }
+            });
+        });
+
+        // Set active tab based on URL hash
+        const hash = window.location.hash;
+        if (hash) {
+            $(`#settings-tabs a[href="${hash}"]`).tab('show');
+        }
+
+        // Update URL hash when tab changes
+        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            history.pushState(null, null, e.target.getAttribute('href'));
+        });
+    });
+</script>
+{% endblock %}

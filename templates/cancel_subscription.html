@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Cancel Subscription - Traders Impulse{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary">
+                <h4>Cancel Subscription</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #dc3545;">cancel</span>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h5 class="alert-heading">Are you sure you want to cancel?</h5>
+                    <p>Your subscription will remain active until the end of your current billing period on <strong>{{ subscription.current_period_end.strftime('%Y-%m-%d') }}</strong>, at which point you'll lose access to:</p>
+                    <ul>
+                        <li>Multiple trading accounts (limited to 1)</li>
+                        <li>Premium trading controls</li>
+                        <li>Extended lockout settings</li>
+                    </ul>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h5>Current Plan</h5>
+                        <p>{{ subscription.plan_name }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h5>Status</h5>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+
+                <h5 class="mt-4">Reason for cancellation</h5>
+                <select class="form-select bg-dark text-light border-secondary mb-4" id="cancellation-reason">
+                    <option value="">Select a reason</option>
+                    <option value="too_expensive">Too expensive</option>
+                    <option value="missing_features">Missing features</option>
+                    <option value="not_using">Not using the service enough</option>
+                    <option value="switching">Switching to a different service</option>
+                    <option value="temporary">Temporary break, will subscribe again</option>
+                    <option value="other">Other reason</option>
+                </select>
+
+                <textarea id="feedback" class="form-control bg-dark text-light border-secondary mb-4" placeholder="Please provide any feedback to help us improve..." rows="3"></textarea>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('manage_subscription') }}" class="btn btn-outline-primary">Keep Subscription</a>
+                    <button id="confirm-cancel-btn" class="btn btn-danger">Confirm Cancellation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Handle cancel confirmation button
+        $('#confirm-cancel-btn').click(function() {
+            const reason = $('#cancellation-reason').val();
+            const feedback = $('#feedback').val();
+
+            if (!reason) {
+                alert('Please select a reason for cancellation');
+                return;
+            }
+
+            if (confirm('Are you absolutely sure you want to cancel your subscription?')) {
+                $.ajax({
+                    url: '{{ url_for("cancel_subscription") }}',
+                    type: 'POST',
+                    data: {
+                        reason: reason,
+                        feedback: feedback
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            window.location.href = '{{ url_for("manage_subscription") }}';
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function() {
+                        alert('Error connecting to server. Please try again.');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

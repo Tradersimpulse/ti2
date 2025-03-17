@@ -1,0 +1,921 @@
+{% extends "base.html" %}
+
+{% block title %}Trading Controls - Traders Impulse{% endblock %}
+
+{% block head %}
+<style>
+    .control-card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s, box-shadow 0.3s;
+        margin-bottom: 20px;
+        height: 100%;
+    }
+
+    .control-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-icon {
+        font-size: 24px;
+        color: #4389ff;
+        margin-right: 12px;
+    }
+
+    .badge-type {
+        background-color: #2a2a2a;
+        color: #a0a0a0;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
+    .setting-status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 50px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .setting-disabled {
+        background-color: #ff3b30;
+    }
+
+    .setting-enabled {
+        background-color: #4cd964;
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #2a2a2a;
+        transition: .4s;
+        border-radius: 24px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #4389ff;
+    }
+
+    input:focus + .slider {
+        box-shadow: 0 0 1px #4389ff;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+
+    .settings-btn {
+        background-color: #2a2a2a;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        transition: background-color 0.3s;
+    }
+
+    .settings-btn:hover {
+        background-color: #3a3a3a;
+        color: #ffffff;
+    }
+
+    .settings-btn .material-symbols-outlined {
+        font-size: 16px;
+        margin-right: 5px;
+    }
+
+    .settings-input-container {
+        display: none;
+        margin-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 15px;
+    }
+
+    .form-control, .form-select {
+        background-color: #242424;
+        border: 1px solid #2a2a2a;
+        color: #ffffff;
+        border-radius: 6px;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #2c2c2c;
+        color: #ffffff;
+        border-color: #4389ff;
+        box-shadow: 0 0 0 0.25rem rgba(67, 137, 255, 0.25);
+    }
+
+    .save-settings-btn {
+        background-color: #4389ff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: background-color 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .save-settings-btn:hover {
+        background-color: #2d73e8;
+        color: white;
+    }
+
+    .category-pill {
+        cursor: pointer;
+        background-color: #2a2a2a;
+        color: #a0a0a0;
+        transition: all 0.3s;
+        border: none;
+        font-size: 14px;
+        padding: 6px 12px;
+        margin-right: 8px;
+        margin-bottom: 10px;
+    }
+
+    .category-pill.active {
+        background-color: #4389ff;
+        color: white;
+    }
+
+    .header-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+    }
+
+    .header-title {
+        flex: 1;
+    }
+
+    .page-heading {
+        margin-bottom: 10px;
+    }
+
+    .page-subheading {
+        color: #a0a0a0;
+        margin-bottom: 0;
+    }
+
+    #lockout-countdown {
+        background-color: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border-radius: 12px;
+    }
+
+    .countdown-display {
+        font-family: monospace;
+        letter-spacing: 2px;
+    }
+
+    /* Notification toast styling */
+    .toast {
+        background-color: #1a1a1a;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast-header {
+        background-color: #2a2a2a;
+        color: #ffffff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px 12px 0 0;
+    }
+
+    .toast-body {
+        padding: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    {% if is_locked %}
+    <div id="lockout-countdown" class="alert text-center mb-4">
+        <h5><span class="material-symbols-outlined align-middle me-2">lock_clock</span> Settings Locked</h5>
+        <div class="countdown-display fs-4 fw-bold">00:00:00:00</div>
+        <small class="d-block mt-2">Settings will remain locked until the countdown expires</small>
+    </div>
+    {% endif %}
+
+    <div class="header-area">
+        <div class="header-title">
+            <h1 class="page-heading">Impulse Controls</h1>
+            <p class="page-subheading">What impulses would you like to control?</p>
+        </div>
+        <div>
+            <button id="save-all-settings" class="save-settings-btn" {% if is_locked %}disabled{% endif %}>
+                <span class="material-symbols-outlined">save</span> Save Settings
+            </button>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <div class="category-pill active" data-category="All">All</div>
+        {% for category in ['FOMO', 'Overtrading', 'Impatience', 'Greed', 'Overleveraging', 'Revenge Trading'] %}
+        <div class="category-pill" data-category="{{ category }}">{{ category }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-4">
+        <!-- Daily Loss Limit -->
+        <div class="col-md-4 col-lg-3" data-category="All Greed Overleveraging">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">trending_down</span>
+                        <h5 class="card-title mb-0">Daily Loss Limit</h5>
+                        <span class="ms-auto badge-type">{{ settings.daily_loss_limit.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Set a daily loss limit. Once reached, all positions will be closed and no trades will be able to be taken.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="daily-loss-limit-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.daily_loss_limit.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.daily_loss_limit.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="daily_loss_limit"
+                                       {% if settings.daily_loss_limit.enabled %}checked{% endif %}
+                                       {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="daily-loss-limit-container" class="settings-input-container">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-0">$</span>
+                            <input type="number" class="form-control" id="daily-loss-limit-value"
+                                   value="{{ settings.daily_loss_limit.value }}" min="0" step="0.1"
+                                   {% if is_locked %}disabled{% endif %}>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Profit Target -->
+        <div class="col-md-4 col-lg-3" data-category="All Greed">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">calendar_view_week</span>
+                        <h5 class="card-title mb-0">Weekly Profit Target</h5>
+                        <span class="ms-auto badge-type">{{ settings.weekly_profit_target.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Set a weekly profit target. Once reached, all positions will be closed and no trades will be able to be taken.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="weekly-profit-target-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.weekly_profit_target.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.weekly_profit_target.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="weekly_profit_target"
+                                      {% if settings.weekly_profit_target.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="weekly-profit-target-container" class="settings-input-container">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-0">$</span>
+                            <input type="number" class="form-control" id="weekly-profit-target-value"
+                                  value="{{ settings.weekly_profit_target.value }}" min="0" step="0.1"
+                                  {% if is_locked %}disabled{% endif %}>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Max # of Trades -->
+        <div class="col-md-4 col-lg-3" data-category="All Overtrading FOMO Revenge Trading">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">swap_horiz</span>
+                        <h5 class="card-title mb-0">Max # of Trades</h5>
+                        <span class="ms-auto badge-type">{{ settings.max_trades.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Set a max # of trades per day. Once reached, all positions will be closed and no trades will be able to be taken.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="max-trades-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.max_trades.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.max_trades.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="max_trades"
+                                      {% if settings.max_trades.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="max-trades-container" class="settings-input-container">
+                        <input type="number" class="form-control" id="max-trades-value"
+                              value="{{ settings.max_trades.value }}" min="0" step="1"
+                              {% if is_locked %}disabled{% endif %}>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Window -->
+        <div class="col-md-4 col-lg-3" data-category="All Impatience">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">schedule</span>
+                        <h5 class="card-title mb-0">Trading Window</h5>
+                        <span class="ms-auto badge-type">{{ settings.trading_window.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Set a trading window. Any trades taken outside of these hours will be closed automatically.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="trading-window-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.trading_window.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.trading_window.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="trading_window"
+                                      {% if settings.trading_window.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="trading-window-container" class="settings-input-container">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Start</label>
+                                <input type="time" class="form-control" id="trading-window-start"
+                                      value="{{ settings.trading_window.start_time }}"
+                                      {% if is_locked %}disabled{% endif %}>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted">End</label>
+                                <input type="time" class="form-control" id="trading-window-end"
+                                      value="{{ settings.trading_window.end_time }}"
+                                      {% if is_locked %}disabled{% endif %}>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Max Position Size -->
+        <div class="col-md-4 col-lg-3" data-category="All Overleveraging">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">straighten</span>
+                        <h5 class="card-title mb-0">Max Position Size</h5>
+                        <span class="ms-auto badge-type">{{ settings.max_position_size.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Max position size limits the position size of your individual trades. If position exceeds it, it will partially close position.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="max-position-size-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.max_position_size.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.max_position_size.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="max_position_size"
+                                      {% if settings.max_position_size.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="max-position-size-container" class="settings-input-container">
+                        <input type="number" class="form-control" id="max-position-size-value"
+                              value="{{ settings.max_position_size.value }}" min="0"
+                              {% if is_locked %}disabled{% endif %}>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Profit Target -->
+        <div class="col-md-4 col-lg-3" data-category="All Greed">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">today</span>
+                        <h5 class="card-title mb-0">Daily Profit Target</h5>
+                        <span class="ms-auto badge-type">{{ settings.daily_profit_target.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Set a daily profit target. Once reached, all positions will be closed and no trades will be able to be taken.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="daily-profit-target-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.daily_profit_target.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.daily_profit_target.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="daily_profit_target"
+                                      {% if settings.daily_profit_target.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="daily-profit-target-container" class="settings-input-container">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-0">$</span>
+                            <input type="number" class="form-control" id="daily-profit-target-value"
+                                  value="{{ settings.daily_profit_target.value }}" min="0" step="0.1"
+                                  {% if is_locked %}disabled{% endif %}>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Max Overall Profit -->
+        <div class="col-md-4 col-lg-3" data-category="All Greed">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">savings</span>
+                        <h5 class="card-title mb-0">Max Overall Profit</h5>
+                        <span class="ms-auto badge-type">{{ settings.max_overall_profit.type }}</span>
+                    </div>
+                    <p class="card-text text-muted">Set a max overall profit target. Once reached, all positions will be closed and no trades will be able to be taken.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="max-overall-profit-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.max_overall_profit.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.max_overall_profit.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="setting-toggle" data-setting="max_overall_profit"
+                                      {% if settings.max_overall_profit.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="max-overall-profit-container" class="settings-input-container">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-0">$</span>
+                            <input type="number" class="form-control" id="max-overall-profit-value"
+                                  value="{{ settings.max_overall_profit.value }}" min="0" step="0.1"
+                                  {% if is_locked %}disabled{% endif %}>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lockout Control -->
+        <div class="col-md-4 col-lg-3" data-category="All">
+            <div class="control-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="material-symbols-outlined control-icon">lock_clock</span>
+                        <h5 class="card-title mb-0">Lockout</h5>
+                        <span class="ms-auto badge-type">time-based</span>
+                    </div>
+                    <p class="card-text text-muted">Lock all settings for a specified period to prevent changes.</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="settings-btn" data-target="lockout-container" {% if is_locked %}disabled{% endif %}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span>Settings</span>
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <span class="setting-status {% if settings.lockout.enabled %}setting-enabled{% else %}setting-disabled{% endif %} me-2">
+                                {% if settings.lockout.enabled %}Enabled{% else %}Disabled{% endif %}
+                            </span>
+                            <label class="toggle-switch mb-0">
+                                <input type="checkbox" class="lockout-toggle" id="lockout_enabled" name="lockout_enabled"
+                                      {% if settings.lockout.enabled %}checked{% endif %}
+                                      {% if is_locked %}disabled{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="lockout-container" class="settings-input-container">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Lock Until</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="lockout_option" id="lockout_eod" value="eod" checked
+                                      {% if is_locked %}disabled{% endif %}>
+                                <label class="btn btn-outline-secondary" for="lockout_eod">EOD</label>
+
+                                <input type="radio" class="btn-check" name="lockout_option" id="lockout_eow" value="eow"
+                                      {% if is_locked %}disabled{% endif %}>
+                                <label class="btn btn-outline-secondary" for="lockout_eow">EOW</label>
+
+                                <input type="radio" class="btn-check" name="lockout_option" id="lockout_custom" value="custom"
+                                      {% if is_locked %}disabled{% endif %}>
+                                <label class="btn btn-outline-secondary" for="lockout_custom">Custom</label>
+                            </div>
+                        </div>
+
+                        <div id="custom_date_container" class="mb-3" style="display:none">
+                            <input type="date" class="form-control" id="lockout_custom_date" name="lockout_custom_date"
+                                  {% if is_locked %}disabled{% endif %}>
+                        </div>
+
+                        {% if settings.lockout.enabled and settings.lockout.until %}
+                        <div class="text-info mt-2">
+                            <small>Settings locked until: {{ settings.lockout.until.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification element for display messages -->
+<div id="notification" class="position-fixed top-0 end-0 p-3" style="z-index: 1050; display: none;">
+    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Notification</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body text-light" id="notification-message">
+            Settings updated successfully
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+    // Category filtering with improved toggling
+    $('.category-pill').click(function() {
+        const category = $(this).data('category');
+
+        if (category === 'All') {
+            // Show all cards
+            $('[data-category]').show();
+            // Set only "All" as active
+            $('.category-pill').removeClass('active');
+            $('.category-pill[data-category="All"]').addClass('active');
+        } else {
+            // Regular category filtering
+            $('.category-pill').removeClass('active');
+            $(this).addClass('active');
+
+            // Show/hide cards based on category
+            $('[data-category]').each(function() {
+                const cardCategories = $(this).data('category').split(' ');
+                if (cardCategories.includes(category)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+    });
+
+    // Toggle input fields when clicking Settings button
+    $('.settings-btn').click(function() {
+        if (!$(this).hasClass('disabled')) {
+            const targetId = $(this).data('target');
+            $('#' + targetId).slideToggle(200);
+        }
+    });
+
+    // Toggle settings on/off
+    $('.setting-toggle').change(function() {
+        if ($(this).attr('id') === 'lockout_enabled') {
+            // Skip for lockout toggle as it's handled separately
+            return;
+        }
+
+        const setting = $(this).data('setting');
+        const enabled = $(this).prop('checked');
+
+        // Update the status display
+        const statusDisplay = $(this).closest('.d-flex').find('.setting-status');
+        statusDisplay.text(enabled ? 'Enabled' : 'Disabled');
+        statusDisplay.removeClass('setting-enabled setting-disabled');
+        statusDisplay.addClass(enabled ? 'setting-enabled' : 'setting-disabled');
+    });
+
+    // Show/hide custom date picker based on selection
+    $('input[name="lockout_option"]').change(function() {
+        if ($(this).val() === 'custom') {
+            $('#custom_date_container').slideDown();
+        } else {
+            $('#custom_date_container').slideUp();
+        }
+    });
+
+    // Create and update countdown timer
+    function createCountdownTimer(endTime) {
+        // Remove existing timer if present
+        $('#lockout-countdown').remove();
+
+        // Create timer container
+        const timerContainer = $('<div id="lockout-countdown" class="alert text-center mb-4">' +
+                               '<h5><span class="material-symbols-outlined align-middle me-2">lock_clock</span> Settings Locked</h5>' +
+                               '<div class="countdown-display fs-4 fw-bold">00:00:00:00</div>' +
+                               '<small class="d-block mt-2">Settings will remain locked until the countdown expires</small>' +
+                               '</div>');
+
+        // Insert at the top of the page
+        timerContainer.insertBefore('.header-area');
+
+        // Start countdown update
+        updateCountdown(endTime);
+
+        // Set interval to update countdown
+        const countdownInterval = setInterval(function() {
+            const timeRemaining = updateCountdown(endTime);
+            if (timeRemaining <= 0) {
+                clearInterval(countdownInterval);
+                // Auto-refresh the page when time expires
+                location.reload();
+            }
+        }, 1000);
+    }
+
+    // Update countdown display
+    function updateCountdown(endTime) {
+        const now = new Date().getTime();
+        const end = new Date(endTime).getTime();
+        const timeRemaining = end - now;
+
+        if (timeRemaining <= 0) {
+            $('#lockout-countdown .countdown-display').text('EXPIRED');
+            return 0;
+        }
+
+        // Calculate days, hours, minutes, seconds
+        const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+
+        // Format with leading zeros
+        const formattedTime =
+            String(days).padStart(2, '0') + ':' +
+            String(hours).padStart(2, '0') + ':' +
+            String(minutes).padStart(2, '0') + ':' +
+            String(seconds).padStart(2, '0');
+
+        $('#lockout-countdown .countdown-display').text(formattedTime);
+        return timeRemaining;
+    }
+
+    // Function to handle lockout toggle changes
+    function handleLockoutToggle() {
+        if ($('#lockout_enabled').prop('checked')) {
+            // Show confirmation dialog
+            if (!confirm("Are you sure you want to lock your settings? You won't be able to change them until the lock period expires.")) {
+                // If user cancels, revert changes
+                $('#lockout_enabled').prop('checked', false);
+
+                // Update status display
+                const statusDisplay = $('#lockout_enabled').closest('.d-flex').find('.setting-status');
+                statusDisplay.text('Disabled');
+                statusDisplay.removeClass('setting-enabled').addClass('setting-disabled');
+                return;
+            }
+
+            // Show lockout settings
+            $('#lockout-container').slideDown();
+
+            // Update status display
+            const statusDisplay = $('#lockout_enabled').closest('.d-flex').find('.setting-status');
+            statusDisplay.text('Enabled');
+            statusDisplay.removeClass('setting-disabled').addClass('setting-enabled');
+        } else {
+            // Update status display
+            const statusDisplay = $('#lockout_enabled').closest('.d-flex').find('.setting-status');
+            statusDisplay.text('Disabled');
+            statusDisplay.removeClass('setting-enabled').addClass('setting-disabled');
+        }
+    }
+
+    // Bind lockout toggle to change event
+    $('#lockout_enabled').change(handleLockoutToggle);
+
+    // Handle Save Settings button click
+    $('#save-all-settings').click(function() {
+        // Create form data with all settings
+        const formData = new FormData();
+
+        // Add all settings to the form data
+        formData.append('daily_loss_limit_enabled', $('.setting-toggle[data-setting="daily_loss_limit"]').prop('checked'));
+        formData.append('daily_loss_limit', $('#daily-loss-limit-value').val());
+
+        formData.append('weekly_profit_target_enabled', $('.setting-toggle[data-setting="weekly_profit_target"]').prop('checked'));
+        formData.append('weekly_profit_target', $('#weekly-profit-target-value').val());
+
+        formData.append('max_trades_enabled', $('.setting-toggle[data-setting="max_trades"]').prop('checked'));
+        formData.append('max_trades', $('#max-trades-value').val());
+
+        formData.append('trading_window_enabled', $('.setting-toggle[data-setting="trading_window"]').prop('checked'));
+        formData.append('trading_window_start', $('#trading-window-start').val());
+        formData.append('trading_window_end', $('#trading-window-end').val());
+
+        formData.append('max_position_size_enabled', $('.setting-toggle[data-setting="max_position_size"]').prop('checked'));
+        formData.append('max_position_size', $('#max-position-size-value').val());
+
+        formData.append('daily_profit_target_enabled', $('.setting-toggle[data-setting="daily_profit_target"]').prop('checked'));
+        formData.append('daily_profit_target', $('#daily-profit-target-value').val());
+
+        formData.append('max_overall_profit_enabled', $('.setting-toggle[data-setting="max_overall_profit"]').prop('checked'));
+        formData.append('max_overall_profit', $('#max-overall-profit-value').val());
+
+        // Add lockout settings
+        formData.append('lockout_enabled', $('#lockout_enabled').prop('checked') ? 'on' : 'off');
+        const lockoutOption = $('input[name="lockout_option"]:checked').val();
+        formData.append('lockout_option', lockoutOption);
+        if (lockoutOption === 'custom') {
+            formData.append('lockout_custom_date', $('#lockout_custom_date').val());
+        }
+
+        // Send to server
+        $.ajax({
+            url: '/settings',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                showNotification('All settings saved successfully');
+
+                // If lockout is enabled, initiate lockdown
+                if ($('#lockout_enabled').prop('checked')) {
+                    // Disable all controls
+                    $('.setting-toggle, .settings-btn, input, select, #save-all-settings').prop('disabled', true);
+                    $('.control-card').addClass('opacity-50');
+
+                    // Create and calculate lockout end time
+                    let lockoutEndTime;
+                    const now = new Date();
+
+                    if (lockoutOption === 'eod') {
+                        // End of day - set to 5:00 PM EST today
+                        lockoutEndTime = new Date(now);
+
+                        // If it's already past 5 PM EST, set to 5 PM tomorrow
+                        const currentHourEST = now.getUTCHours() - 5; // Convert to EST from UTC
+                        if (currentHourEST >= 17) { // If it's already past 5 PM EST
+                            lockoutEndTime.setDate(lockoutEndTime.getDate() + 1);
+                        }
+
+                        // Set to 5:00 PM EST (10:00 PM UTC)
+                        lockoutEndTime.setUTCHours(22, 0, 0, 0);
+                    } else if (lockoutOption === 'eow') {
+                        // End of week - set to Friday 5:00 PM EST
+                        const daysToFriday = (5 - now.getDay() + 7) % 7; // Calculate days to next Friday
+                        lockoutEndTime = new Date(now);
+                        lockoutEndTime.setDate(now.getDate() + daysToFriday);
+                        // Set to 5:00 PM EST (10:00 PM UTC)
+                        lockoutEndTime.setUTCHours(22, 0, 0, 0);
+                    } else if (lockoutOption === 'custom') {
+                        // Custom date from calendar at 5:00 PM EST
+                        const customDate = $('#lockout_custom_date').val();
+                        if (customDate) {
+                            lockoutEndTime = new Date(customDate);
+                            // Set to 5:00 PM EST (10:00 PM UTC)
+                            lockoutEndTime.setUTCHours(22, 0, 0, 0);
+                        } else {
+                            // Default to end of day if no date selected
+                            lockoutEndTime = new Date(now);
+                            // If it's already past 5 PM EST, set to 5 PM tomorrow
+                            const currentHourEST = now.getUTCHours() - 5; // Convert to EST from UTC
+                            if (currentHourEST >= 17) { // If it's already past 5 PM EST
+                                lockoutEndTime.setDate(lockoutEndTime.getDate() + 1);
+                            }
+                            // Set to 5:00 PM EST (10:00 PM UTC)
+                            lockoutEndTime.setUTCHours(22, 0, 0, 0);
+                        }
+                    }
+
+                    // Start countdown timer
+                    createCountdownTimer(lockoutEndTime);
+                }
+            },
+            error: function() {
+                showNotification('Error saving settings', 'error');
+            }
+        });
+    });
+
+    // Function to show notifications
+    function showNotification(message, type = 'success') {
+        $('#notification-message').text(message);
+
+        // Add appropriate styling based on type
+        if (type === 'success') {
+            $('#notification-message').css('color', '#4cd964');
+        } else {
+            $('#notification-message').css('color', '#ff3b30');
+        }
+
+        // Show the notification
+        $('#notification').fadeIn();
+
+        // Initialize Bootstrap toast
+        const toastElement = document.querySelector('.toast');
+        const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+        toast.show();
+    }
+
+    // Check if settings are already locked (server-side state)
+    {% if is_locked and settings.lockout.until %}
+        createCountdownTimer("{{ settings.lockout.until.strftime('%Y-%m-%d %H:%M:%S') }}");
+    {% endif %}
+
+    // Show all input fields for settings that are enabled
+    $('.setting-toggle:checked').each(function() {
+        const targetId = $(this).data('setting') + '-container';
+        $('#' + targetId).slideDown();
+    });
+});
+</script>
+{% endblock %}

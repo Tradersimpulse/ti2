@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traders Impulse - Trade Better, Control Your Impulses</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background-color: transparent;
+            padding: 20px 0;
+        }
+
+        .navbar-brand {
+            font-size: 1.6rem;
+            letter-spacing: 1px;
+        }
+
+        .navbar-brand .highlight {
+            font-weight: 700;
+        }
+
+        .navbar-dark .navbar-nav .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            margin-left: 15px;
+            font-weight: 500;
+        }
+
+        .navbar-dark .navbar-nav .nav-link:hover {
+            color: #fff;
+        }
+
+        .btn-login {
+            background-color: #4389ff;
+            color: white;
+            border-radius: 50px;
+            padding: 8px 24px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-login:hover {
+            background-color: #2d73e8;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .hero-section {
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .main-heading {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .sub-heading {
+            font-size: 3.5rem;
+            color: #4389ff;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        .hero-description {
+            max-width: 650px;
+            margin: 0 auto 40px;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .btn-action {
+            background-color: #4389ff;
+            color: white;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            margin: 0 10px 15px;
+        }
+
+        .btn-action:hover {
+            background-color: #2d73e8;
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .btn-secondary-action {
+            background-color: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            margin: 0 10px 15px;
+        }
+
+        .btn-secondary-action:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .demo-section {
+            position: relative;
+            padding: 50px 0;
+        }
+
+        .platform-image {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .platform-phone {
+            position: absolute;
+            right: 5%;
+            bottom: -5%;
+            width: 15%;
+        }
+
+        .feature-section {
+            padding: 100px 0;
+        }
+
+        .feature-card {
+            background-color: #1a1a1a;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #4389ff;
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .feature-description {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .cta-section {
+            background-color: #1a1a1a;
+            padding: 80px 0;
+            text-align: center;
+            border-radius: 15px;
+            margin: 50px 0;
+        }
+
+        .cta-heading {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .cta-description {
+            max-width: 600px;
+            margin: 0 auto 30px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        footer {
+            padding: 50px 0;
+            background-color: #1a1a1a;
+        }
+
+        .footer-brand {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .footer-description {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+        }
+
+        .footer-links h5 {
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .footer-links ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #4389ff;
+        }
+
+        .footer-bottom {
+            padding-top: 30px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .tm-symbol {
+            font-size: 0.8rem;
+            vertical-align: super;
+        }
+
+        /* Arrow animation for Get Started button */
+        .btn-arrow {
+            position: relative;
+            padding-right: 50px;
+        }
+
+        .btn-arrow .arrow {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.3s;
+        }
+
+        .btn-arrow:hover .arrow {
+            transform: translate(5px, -50%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#"><span>TRADERS</span><span class="highlight">IMPULSE</span><span class="tm-symbol">™</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Community</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Pricing</a>
+                    </li>
+                    <li class="nav-item ms-3">
+                        <a class="btn btn-login" href="{{ url_for('login') }}">Log in <span class="material-symbols-outlined align-middle ms-1" style="font-size: 18px;">person</span></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="main-heading">Less Trading Errors</h1>
+            <h2 class="sub-heading">More Profits</h2>
+            <p class="hero-description">
+                Our software makes it easy to combat and correct trading errors with customizable Impulse Controls™
+            </p>
+            <div class="d-flex justify-content-center flex-wrap">
+                <a href="{{ url_for('register') }}" class="btn btn-action btn-arrow">
+                    Get started <span class="arrow material-symbols-outlined align-middle">arrow_forward</span>
+                </a>
+                <a href="#features" class="btn btn-secondary-action">Learn more</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 position-relative">
+                    <img src="{{ url_for('static', filename='images/trading-platform.png') }}" alt="Trading Platform Interface" class="platform-image">
+                    <img src="{{ url_for('static', filename='images/mobile-app.png') }}" alt="Mobile App" class="platform-phone d-none d-md-block">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="feature-section" id="features">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-12 text-center">
+                    <h2 class="display-5 fw-bold mb-4">Trading Controls That Work</h2>
+                    <p class="lead text-muted mb-5">Protect yourself from common trading mistakes with our powerful impulse controls</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <span class="material-symbols-outlined feature-icon">trending_down</span>
+                        <h3 class="feature-title">Daily Loss Limit</h3>
+                        <p class="feature-description">Set a maximum daily loss limit to protect your capital. Once reached, the system prevents further trades.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <span class="material-symbols-outlined feature-icon">swap_horiz</span>
+                        <h3 class="feature-title">Max Trades Per Day</h3>
+                        <p class="feature-description">Control overtrading by setting a maximum number of trades per day, helping you maintain discipline.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <span class="material-symbols-outlined feature-icon">schedule</span>
+                        <h3 class="feature-title">Trading Window</h3>
+                        <p class="feature-description">Define specific hours for trading to avoid impulsive trades during volatile or illiquid market periods.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <span class="material-symbols-outlined feature-icon">straighten</span>
+                        <h3 class="feature-title">Position Size Control</h3>
+                        <p class="feature-description">Limit your exposure by setting maximum position sizes for each trade, preventing overleveraging.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <span class="material-symbols-outlined feature-icon">calendar_view_week</span>
+                        <h3 class="feature-title">Weekly Profit Target</h3>
+                        <p class="feature-description">Set weekly profit targets to encourage consistent performance and prevent overtrading.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <span class="material-symbols-outlined feature-icon">lock_clock</span>
+                        <h3 class="feature-title">Settings Lockout</h3>
+                        <p class="feature-description">Lock your trading settings for a specified period to prevent impulsive changes during emotional trading.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="cta-section">
+        <div class="container">
+            <h2 class="cta-heading">Ready to Improve Your Trading?</h2>
+            <p class="cta-description">Sign up today and experience how our trading controls can help reduce your trading errors and increase your profits.</p>
+            <a href="{{ url_for('register') }}" class="btn btn-action">Get Started Now</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <span class="footer-brand">TRADERSIMPULSE<span class="tm-symbol">™</span></span>
+                    <p class="footer-description">A modern solution to help traders control their impulses and improve trading performance through customizable controls.</p>
+                </div>
+
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <div class="footer-links">
+                        <h5>Product</h5>
+                        <ul>
+                            <li><a href="#">Features</a></li>
+                            <li><a href="#">Pricing</a></li>
+                            <li><a href="#">Integrations</a></li>
+                            <li><a href="#">Updates</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <div class="footer-links">
+                        <h5>Company</h5>
+                        <ul>
+                            <li><a href="#">About Us</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Press</a></li>
+                            <li><a href="#">Contact</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <div class="footer-links">
+                        <h5>Resources</h5>
+                        <ul>
+                            <li><a href="#">Blog</a></li>
+                            <li><a href="#">Community</a></li>
+                            <li><a href="#">Support</a></li>
+                            <li><a href="#">Documentation</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-2 mb-4">
+                    <div class="footer-links">
+                        <h5>Legal</h5>
+                        <ul>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Disclaimer</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 TradersImpulse. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

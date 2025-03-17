@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Traders Impulse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-container {
+            max-width: 450px;
+            margin: 80px auto;
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .logo span {
+            font-weight: bold;
+        }
+        .login-heading {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-control {
+            background-color: #242424;
+            border: none;
+            color: #fff;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+        .form-control:focus {
+            background-color: #2c2c2c;
+            color: #fff;
+            box-shadow: 0 0 0 0.2rem rgba(67, 137, 255, 0.25);
+        }
+        .login-btn {
+            background-color: #4389ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px;
+            width: 100%;
+            margin-top: 15px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .login-btn:hover {
+            background-color: #2d73e8;
+        }
+        .reset-link {
+            display: block;
+            text-align: right;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #aaaaaa;
+        }
+        .reset-link a {
+            color: #4389ff;
+            text-decoration: none;
+        }
+        .signup-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #aaaaaa;
+        }
+        .signup-link a {
+            color: #4389ff;
+            text-decoration: none;
+        }
+        .logo-text {
+            font-size: 1.6rem;
+            letter-spacing: 1px;
+        }
+        .logo-text .highlight {
+            font-weight: 700;
+        }
+        .tm-symbol {
+            font-size: 0.8rem;
+            vertical-align: super;
+        }
+        .alert {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border: none;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <div class="logo">
+                <div class="logo-text">
+                    TRADERS<span class="highlight">IMPULSE</span><span class="tm-symbol">™</span>
+                </div>
+            </div>
+            
+            <div class="login-heading">
+                <h2 class="mb-3">Welcome Back</h2>
+                <p>Sign in to continue to your trading dashboard</p>
+            </div>
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-danger mb-3" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="post">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                </div>
+                
+                <div class="mb-3">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                </div>
+                
+                <div class="reset-link">
+                    <a href="#">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="btn login-btn">Sign in</button>
+            </form>
+            
+            <div class="signup-link">
+                Don't have an account? <a href="{{ url_for('register') }}">Sign up</a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Traders Impulse{% endblock %}
+
+{% block head %}
+<style>
+    body {
+        background-color: #131313;
+    }
+    .dashboard-card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s, box-shadow 0.3s;
+        margin-bottom: 20px;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px 12px 0 0 !important;
+        padding: 16px 20px;
+    }
+
+    .card-title {
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+
+    .stat-label {
+        color: #a0a0a0;
+        font-size: 0.85rem;
+        margin-bottom: 5px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    /* Style for N/A values */
+    .na-value {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+    }
+
+    .positive-value {
+        color: #4cd964;
+    }
+
+    .negative-value {
+        color: #ff3b30;
+    }
+
+    .neutral-value {
+        color: #ffffff;
+    }
+
+    .progress {
+        height: 8px;
+        background-color: #2a2a2a;
+        border-radius: 4px;
+        margin-top: 8px;
+    }
+
+    .badge-enabled {
+        background-color: #4cd964;
+    }
+
+    .badge-disabled {
+        background-color: #ff3b30;
+    }
+
+    .account-badge {
+        background-color: #4389ff;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-weight: 500;
+        font-size: 0.8rem;
+    }
+
+    .control-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .control-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .control-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background-color: rgba(67, 137, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+    }
+
+    .control-icon span {
+        color: #4389ff;
+        font-size: 20px;
+    }
+
+    .btn-manage {
+        background-color: #4389ff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-weight: 500;
+        transition: background-color 0.3s;
+    }
+
+    .btn-manage:hover {
+        background-color: #2d73e8;
+        color: white;
+    }
+
+    .welcome-message {
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .stat-value {
+            font-size: 1.2rem;
+        }
+
+        .na-value {
+            font-size: 1.6rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="welcome-message">
+        <h1>Trading Dashboard</h1>
+        <p class="text-muted">Welcome back. Here's an overview of your trading activity.</p>
+    </div>
+
+    <div class="row">
+        <!-- Account Overview Card -->
+        <div class="col-md-4">
+            <div class="dashboard-card h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title">Account Overview</h5>
+                        <span class="account-badge">{{ account.account_id }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-4">
+                            <div class="stat-label">Account Type</div>
+                            <p class="stat-value text-capitalize neutral-value">{{ account.env }}</p>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <div class="stat-label">Current Equity</div>
+                            <p class="stat-value positive-value">${{ account.account_equity|default(0, true)|float|round(2) }}</p>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-label">Initial Balance</div>
+                            <p class="stat-value neutral-value">
+                                {% if account.initial_balance is defined and account.initial_balance is not none %}
+                                    ${{ account.initial_balance|float|round(2) }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-label">Total P/L</div>
+                            {% if account.total_pl is defined and account.total_pl is not none %}
+                                <p class="stat-value {{ 'positive-value' if account.total_pl >= 0 else 'negative-value' }}">
+                                    ${{ account.total_pl|float|round(2) }}
+                                </p>
+                            {% elif account.account_equity is defined and account.initial_balance is defined %}
+                                {% set total_pl = account.account_equity - account.initial_balance %}
+                                <p class="stat-value {{ 'positive-value' if total_pl >= 0 else 'negative-value' }}">
+                                    ${{ total_pl|float|round(2) }}
+                                </p>
+                            {% else %}
+                                <p class="stat-value neutral-value">$0.00</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Status Card -->
+        <div class="col-md-4">
+            <div class="dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title">Trading Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-4">
+                            <div class="stat-label">Today's Trades</div>
+                            <p class="stat-value neutral-value na-value" id="trades-count-container">
+                                <span id="trades-count">N/A</span>
+                                {% if account.max_num_of_trades_enabled and account.max_num_of_trades %}
+                                <span class="trades-limit" style="font-size: 1rem; font-weight: 500; display: none;"> / {{ account.max_num_of_trades }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <div class="stat-label">Open Positions</div>
+                            <p class="stat-value neutral-value na-value" id="open-positions">N/A</p>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-label">Daily P/L</div>
+                            <p class="stat-value neutral-value na-value" id="daily-pl">N/A</p>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-label">Impulses Hit</div>
+                            <p class="stat-value neutral-value na-value" id="win-rate">N/A</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Card -->
+        <div class="col-md-4">
+            <div class="dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title">Subscription</h5>
+                </div>
+                <div class="card-body">
+                    {% if subscription %}
+                        <div class="d-flex justify-content-between mb-3">
+                            <div>
+                                <div class="stat-label">Current Plan</div>
+                                <p class="stat-value neutral-value">{{ subscription.plan_name }}</p>
+                            </div>
+                            <span class="badge {{ 'bg-success' if subscription.status == 'active' else 'bg-warning' }} rounded-pill align-self-start px-3 py-2">
+                                {{ subscription.status|capitalize }}
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="stat-label">Trading Accounts</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="stat-value neutral-value mb-0">{{ current_user.accounts|length }} / {{ subscription.max_accounts_allowed }}</p>
+                            </div>
+                            <div class="progress">
+                                {% set progress_class = 'bg-success' %}
+                                {% if current_user.accounts|length >= subscription.max_accounts_allowed %}
+                                    {% set progress_class = 'bg-danger' %}
+                                {% elif current_user.accounts|length >= subscription.max_accounts_allowed * 0.8 %}
+                                    {% set progress_class = 'bg-warning' %}
+                                {% endif %}
+
+                                <div class="progress-bar {{ progress_class }}"
+                                    role="progressbar"
+                                    style="width: {{ ((current_user.accounts|length / subscription.max_accounts_allowed) * 100)|round }}%;"
+                                    aria-valuenow="{{ current_user.accounts|length }}"
+                                    aria-valuemin="0"
+                                    aria-valuemax="{{ subscription.max_accounts_allowed }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="stat-label">Renewal Date</div>
+                            {% if subscription.current_period_end %}
+                            <p class="stat-value neutral-value">{{ subscription.current_period_end.strftime('%b %d, %Y') }}</p>
+                            {% else %}
+                            <p class="stat-value neutral-value">-</p>
+                            {% endif %}
+                        </div>
+
+                        {% if subscription.cancel_at_period_end %}
+                        <div class="alert alert-warning p-2 small">
+                            Your subscription will end after the current period.
+                        </div>
+                        {% endif %}
+
+                        <a href="{{ url_for('billing') }}" class="btn btn-manage w-100">Manage Subscription</a>
+                    {% else %}
+                        <div class="mb-4">
+                            <p>You don't have an active subscription yet.</p>
+                            <p>Subscribe to access more trading accounts and premium features.</p>
+                        </div>
+                        <a href="{{ url_for('billing') }}" class="btn btn-manage w-100">Choose a Plan</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Active Controls Card -->
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title">Active Trading Controls</h5>
+                        <a href="{{ url_for('settings') }}" class="btn btn-manage">Manage Controls</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% set controls = [
+                            {'name': 'Daily Loss Limit', 'field': 'daily_loss_limit_enabled', 'icon': 'trending_down'},
+                            {'name': 'Daily Profit Target', 'field': 'daily_profit_target_enabled', 'icon': 'trending_up'},
+                            {'name': 'Weekly Profit Target', 'field': 'weekly_profit_target_enabled', 'icon': 'calendar_view_week'},
+                            {'name': 'Max Overall Profit', 'field': 'max_overall_profit_enabled', 'icon': 'savings'},
+                            {'name': 'Max Trades', 'field': 'max_num_of_trades_enabled', 'icon': 'swap_horiz'},
+                            {'name': 'Trading Window', 'field': 'trading_window_enabled', 'icon': 'schedule'},
+                            {'name': 'Max Position Size', 'field': 'max_position_size_enabled', 'icon': 'straighten'}
+                        ] %}
+
+                        {% for control in controls %}
+                            <div class="col-md-6">
+                                <div class="control-item">
+                                    <div class="control-icon">
+                                        <span class="material-symbols-outlined">{{ control.icon }}</span>
+                                    </div>
+                                    <div class="ms-2">
+                                        <div>{{ control.name }}</div>
+                                    </div>
+                                    <div class="ms-auto">
+                                        {% if account[control.field] %}
+                                        <span class="badge badge-enabled">Enabled</span>
+                                        {% else %}
+                                        <span class="badge badge-disabled">Disabled</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accounts Usage Section (Only for subscriptions) -->
+    {% if subscription %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title">Account Usage</h5>
+                        {% if current_user.accounts|length < subscription.max_accounts_allowed %}
+                            <a href="{{ url_for('manage_accounts') }}" class="btn btn-manage">
+                                <span class="material-symbols-outlined align-middle me-1" style="font-size: 18px;">add</span>
+                                Add Account
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('billing') }}" class="btn btn-manage">
+                                <span class="material-symbols-outlined align-middle me-1" style="font-size: 18px;">upgrade</span>
+                                Upgrade Plan
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="stat-label">Used Accounts</div>
+                            <p class="stat-value neutral-value">{{ current_user.accounts|length }} / {{ subscription.max_accounts_allowed }}</p>
+                        </div>
+                        <a href="{{ url_for('manage_accounts') }}" class="btn btn-outline-secondary btn-sm">
+                            <span class="material-symbols-outlined align-middle me-1" style="font-size: 16px;">settings</span>
+                            Manage Accounts
+                        </a>
+                    </div>
+
+                    <div class="progress">
+                        {% set progress_class = 'bg-success' %}
+                        {% if current_user.accounts|length >= subscription.max_accounts_allowed %}
+                            {% set progress_class = 'bg-danger' %}
+                        {% elif current_user.accounts|length >= subscription.max_accounts_allowed * 0.8 %}
+                            {% set progress_class = 'bg-warning' %}
+                        {% endif %}
+
+                        <div class="progress-bar {{ progress_class }}"
+                             role="progressbar"
+                             style="width: {{ ((current_user.accounts|length / subscription.max_accounts_allowed) * 100)|round }}%;"
+                             aria-valuenow="{{ current_user.accounts|length }}"
+                             aria-valuemin="0"
+                             aria-valuemax="{{ subscription.max_accounts_allowed }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Update trading status
+$(document).ready(function() {
+    {% if trading_status %}
+        // Use the real data from TradeLocker
+        if ('{{ trading_status.trades_count }}' !== 'N/A') {
+            $('#trades-count').text('{{ trading_status.trades_count }}');
+            $('#trades-count').removeClass('na-value');
+            $('.trades-limit').show();
+
+            if ({{ trading_status.trades_count }} > 0) {
+                $('#trades-count-container').removeClass('na-value');
+            }
+        }
+
+        if ('{{ trading_status.open_positions }}' !== 'N/A') {
+            $('#open-positions').text('{{ trading_status.open_positions }}');
+            $('#open-positions').removeClass('na-value');
+        }
+
+        if ('{{ trading_status.win_rate }}' !== 'N/A') {
+            $('#win-rate').text('{{ trading_status.win_rate }}');
+            $('#win-rate').removeClass('na-value');
+        }
+
+        {% if trading_status.daily_pl == 'N/A' %}
+            // Handle N/A case - already set in HTML
+        {% else %}
+            // Handle numeric case
+            const dailyPl = parseFloat('{{ trading_status.daily_pl }}');
+            $('#daily-pl').text('$' + Math.abs(dailyPl).toFixed(2));
+            $('#daily-pl').removeClass('na-value');
+
+            if (dailyPl > 0) {
+                $('#daily-pl').removeClass('negative-value neutral-value').addClass('positive-value');
+                $('#daily-pl').prepend('+');
+            } else if (dailyPl < 0) {
+                $('#daily-pl').removeClass('positive-value neutral-value').addClass('negative-value');
+                $('#daily-pl').prepend('-');
+            } else {
+                $('#daily-pl').removeClass('positive-value negative-value').addClass('neutral-value');
+            }
+        {% endif %}
+    {% endif %}
+});
+</script>
+{% endblock %}
