@@ -49,7 +49,7 @@
                 <textarea id="feedback" class="form-control bg-dark text-light border-secondary mb-4" placeholder="Please provide any feedback to help us improve..." rows="3"></textarea>
 
                 <div class="d-flex justify-content-between">
-                    <a href="{{ url_for('manage_subscription') }}" class="btn btn-outline-primary">Keep Subscription</a>
+                    <a href="{{ url_for('subscription_manage') }}" class="btn btn-outline-primary">Keep Subscription</a>
                     <button id="confirm-cancel-btn" class="btn btn-danger">Confirm Cancellation</button>
                 </div>
             </div>
@@ -73,7 +73,7 @@
 
             if (confirm('Are you absolutely sure you want to cancel your subscription?')) {
                 $.ajax({
-                    url: '{{ url_for("cancel_subscription") }}',
+                    url: '{{ url_for("subscription_cancel") }}',
                     type: 'POST',
                     data: {
                         reason: reason,
@@ -81,7 +81,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            window.location.href = '{{ url_for("manage_subscription") }}';
+                            window.location.href = '{{ url_for("subscription_manage") }}';
                         } else {
                             alert('Error: ' + response.error);
                         }

@@ -636,7 +636,7 @@ def landing():
 
 
 @app.route('/signup', methods=['GET', 'POST'])
-def register():
+def signup():
     """User registration page"""
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -736,6 +736,9 @@ def dashboard():
     # Calculate total P/L if not already present
     if account_info and 'initial_balance' in account_info and 'account_equity' in account_info:
         if 'total_pl' not in account_info or account_info['total_pl'] is None:
+            if account_info['account_equity'] is None or account_info['initial_balance'] is None:
+                account_info['account_equity'] = 0
+                account_info['initial_balance'] = 0
             account_info['total_pl'] = account_info['account_equity'] - account_info['initial_balance']
 
     # Get user's active subscription
@@ -1282,12 +1285,12 @@ def manage_accounts():
 @login_required
 def billing():
     """Redirect to manage_subscription for billing"""
-    return redirect(url_for('manage_subscription'))
+    return redirect(url_for('subscription_manage'))
 
 
 @app.route('/subscription/manage')
 @login_required
-def manage_subscription():
+def subscription_manage():
     """Show subscription management page"""
     # Get user's current subscription
     subscription = get_user_subscription(current_user.id)
@@ -1412,7 +1415,7 @@ def subscription_success():
 
 @app.route('/subscription/cancel', methods=['GET', 'POST'])
 @login_required
-def cancel_subscription():
+def subscription_cancel():
     """Cancel a subscription at period end"""
     if request.method == 'POST':
         try:
@@ -1463,7 +1466,7 @@ def cancel_subscription():
 
 @app.route('/subscription/resume', methods=['POST'])
 @login_required
-def resume_subscription():
+def subscription_resume():
     """Resume a previously canceled subscription"""
     try:
         # Get the user's canceled subscription
