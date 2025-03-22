@@ -5,3 +5,4 @@ venv/
 .env
 *.sqlite
 .DS_Store
+env/
