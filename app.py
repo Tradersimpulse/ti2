@@ -452,7 +452,39 @@ def get_user_subscription(user_id):
     except Exception as e:
         logger.error(f"Error getting user subscription: {str(e)}")
         return None
+        
+def start_container_for_account(account_id):
+    try:
+        response = requests.post(
+            "http://ec2-54-90-118-183.compute-1.amazonaws.com:5000/start",
+            json={"image": "trading-conditions"}
+        )
 
+        if response.status_code == 200:
+            data = response.json()
+            container_id = data.get("container_id")
+            uid = data.get("uid")
+
+            # Save to the trading_accounts table
+            conn = get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE trading_accounts 
+                    SET container_id = %s, container_uid = %s 
+                    WHERE account_id = %s
+                """, (container_id, uid, account_id))
+                conn.commit()
+                cursor.close()
+                conn.close()
+
+            return True
+        else:
+            print("Failed to start container:", response.text)
+            return False
+    except Exception as e:
+        print(f"Error starting container: {str(e)}")
+        return False
 
 def check_accounts_limit(user_id):
     """Check if user has reached their account limit based on subscription"""
@@ -695,6 +727,10 @@ def signup():
                 (account_id, env, initial_balance, account_equity) 
                 VALUES (%s, %s, %s, %s)
             """, (account_id, 'demo', 10000.00, 10000.00))
+
+            # Start container for the new account
+            start_container_for_account(account_id)
+
 
             # Link the account to the user
             cursor.execute("""
