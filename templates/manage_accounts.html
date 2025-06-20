@@ -63,41 +63,34 @@
         background-color: #c82333;
     }
 
-    .btn-remove {
-        width: 36px;
-        height: 36px;
-        padding: 0;
+    .remove-x {
+        color: #dc3545;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .remove-x:hover {
         background-color: rgba(220, 53, 69, 0.1);
-        border: 1px solid rgba(220, 53, 69, 0.3);
-        color: #dc3545;
-        transition: all 0.2s ease;
+        color: #ff4757;
+        transform: scale(1.1);
     }
 
-    .btn-remove:hover {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: #fff;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    .remove-x:active {
+        transform: scale(0.95);
     }
 
-    .btn-remove:active {
-        transform: translateY(0);
-    }
-
-    .btn-remove:disabled {
+    .remove-x.loading {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
-        box-shadow: none;
-    }
-
-    .btn-remove i {
-        font-size: 14px;
     }
 
     .action-buttons {
@@ -171,13 +164,12 @@
                                         <button type="submit" class="btn btn-sm btn-outline-primary">Set Default</button>
                                     </form>
 
-                                    <button type="button" 
-                                            class="btn btn-remove" 
-                                            onclick="removeAccount('{{ account_id }}')"
-                                            title="Remove account and stop container"
-                                            id="remove-btn-{{ account_id }}">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                    <span class="remove-x" 
+                                          onclick="removeAccount('{{ account_id }}')"
+                                          title="Remove account and stop container"
+                                          id="remove-btn-{{ account_id }}">
+                                        <i class="fas fa-times"></i>
+                                    </span>
                                 </div>
                             </td>
                         </tr>
@@ -306,13 +298,13 @@ function removeAccount(accountId) {
     const confirmMessage = `Are you sure you want to remove account ${accountId}?\n\nThis will:\n• Stop the associated trading container\n• Remove all trading protections\n• Cannot be undone\n\nContinue?`;
     
     if (confirm(confirmMessage)) {
-        // Get the button and show loading state
-        const button = document.getElementById(`remove-btn-${accountId}`);
-        const originalHTML = button.innerHTML;
+        // Get the element and show loading state
+        const element = document.getElementById(`remove-btn-${accountId}`);
+        const originalHTML = element.innerHTML;
         
         // Show loading state
-        button.innerHTML = '<i class="fas fa-spinner remove-loading"></i>';
-        button.disabled = true;
+        element.innerHTML = '<i class="fas fa-spinner remove-loading"></i>';
+        element.classList.add('loading');
         
         // Send remove request
         fetch('/remove_account', {
@@ -340,18 +332,18 @@ function removeAccount(accountId) {
                 // Show error message
                 alert('Error: ' + (data.error || 'Unknown error occurred'));
                 
-                // Restore button state
-                button.innerHTML = originalHTML;
-                button.disabled = false;
+                // Restore element state
+                element.innerHTML = originalHTML;
+                element.classList.remove('loading');
             }
         })
         .catch(error => {
             console.error('Error:', error);
             alert('Network error occurred. Please try again.');
             
-            // Restore button state
-            button.innerHTML = originalHTML;
-            button.disabled = false;
+            // Restore element state
+            element.innerHTML = originalHTML;
+            element.classList.remove('loading');
         });
     }
 }
