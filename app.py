@@ -83,7 +83,57 @@ def get_account_info(account_id):
             conn.close()
         return {}
 
+def start_container_for_account_enhanced(account_id):
+    """
+    Start container for account and return container info
+    Returns: (success: bool, container_id: str, container_uid: str)
+    """
+    try:
+        logger.info(f"Requesting container start for account {account_id}")
+        
+        response = requests.post(
+            "http://ec2-54-90-118-183.compute-1.amazonaws.com:5000/start",
+            json={"image": "trading-conditions"},
+            timeout=60  # Increased timeout for container creation
+        )
 
+        logger.info(f"Container API response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"Container API response data: {data}")
+            
+            full_container_id = data.get("container_id")
+            container_uid = data.get("uid")
+
+            if not full_container_id:
+                logger.error("No container_id in API response")
+                return False, None, "No container_id returned from API"
+
+            # Take first 12 characters of container_id
+            container_id = full_container_id[:12]
+            
+            logger.info(f"Container created - Full ID: {full_container_id}, Short ID: {container_id}, UID: {container_uid}")
+            
+            return True, container_id, container_uid
+        else:
+            error_msg = f"Container API error: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            return False, None, error_msg
+
+    except requests.exceptions.Timeout:
+        error_msg = "Container creation timed out after 60 seconds"
+        logger.error(error_msg)
+        return False, None, error_msg
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Network error creating container: {str(e)}"
+        logger.error(error_msg)
+        return False, None, error_msg
+    except Exception as e:
+        error_msg = f"Unexpected error creating container: {str(e)}"
+        logger.error(error_msg)
+        return False, None, error_msg
+        
 def get_trading_settings(account_id):
     try:
         conn = get_connection()
@@ -1207,104 +1257,174 @@ def manage_accounts():
                 error_message = f"Error connecting to TradeLocker: {str(e)}"
 
         elif action == 'add_tradelocker_accounts':
-            selected_accounts = request.form.getlist('selected_accounts')
-            account_type = session.get('tradelocker_env', 'demo')
+    selected_accounts = request.form.getlist('selected_accounts')
+    account_type = session.get('tradelocker_env', 'demo')
 
-            # Check account limit before adding
-            current_count = len(current_user.accounts)
-            if subscription and current_count + len(selected_accounts) > subscription['max_accounts_allowed']:
-                error_message = f"Adding these accounts would exceed your plan limit of {subscription['max_accounts_allowed']} accounts."
-                return render_template('manage_accounts.html',
-                                       error_message=error_message,
-                                       success_message=None,
-                                       tradelocker_accounts=tradelocker_accounts,
-                                       subscription=subscription)
+    # Check if user has a subscription first
+    if not subscription:
+        error_message = "You need an active subscription to add accounts and start containers. Please subscribe to a plan first."
+        return render_template('manage_accounts.html',
+                               error_message=error_message,
+                               success_message=None,
+                               tradelocker_accounts=tradelocker_accounts,
+                               subscription=None)
 
-            if not selected_accounts:
-                error_message = "Please select at least one account to add"
-            else:
-                try:
-                    conn = get_connection()
-                    if conn:
-                        cursor = conn.cursor()
-                        accounts_added = 0
+    # Check account limit before adding
+    current_count = len(current_user.accounts)
+    if current_count + len(selected_accounts) > subscription['max_accounts_allowed']:
+        error_message = f"Adding these accounts would exceed your plan limit of {subscription['max_accounts_allowed']} accounts. You currently have {current_count} accounts and are trying to add {len(selected_accounts)} more."
+        return render_template('manage_accounts.html',
+                               error_message=error_message,
+                               success_message=None,
+                               tradelocker_accounts=tradelocker_accounts,
+                               subscription=subscription)
 
-                        # Get the accounts from session
-                        tradelocker_accounts = session.get('tradelocker_accounts', [])
+    if not selected_accounts:
+        error_message = "Please select at least one account to add"
+    else:
+        try:
+            conn = get_connection()
+            if conn:
+                cursor = conn.cursor()
+                accounts_added = 0
+                container_results = []
 
-                        for account_id in selected_accounts:
-                            # Find the account details in the session data
-                            account_data = next((acc for acc in tradelocker_accounts if acc['id'] == account_id), None)
+                # Log subscription info for debugging
+                logger.info(f"User {current_user.id} has {subscription['plan_name']} plan with {subscription['max_accounts_allowed']} max accounts")
+                logger.info(f"Current accounts: {current_count}, Adding: {len(selected_accounts)}, Total will be: {current_count + len(selected_accounts)}")
 
-                            # Extract account details if available
-                            account_balance = 0
-                            account_num = ''
+                # Get the accounts from session
+                tradelocker_accounts = session.get('tradelocker_accounts', [])
 
-                            if account_data:
-                                # Parse the label to extract the balance
-                                label_parts = account_data.get('label', '').split('(')
-                                if len(label_parts) > 1:
-                                    balance_part = label_parts[1].replace(')', '').split(' ')
-                                    if len(balance_part) > 1:
-                                        try:
-                                            account_balance = float(balance_part[1])
-                                        except:
-                                            account_balance = 0
+                for account_id in selected_accounts:
+                    try:
+                        # Double-check we haven't exceeded limits during processing
+                        if len(current_user.accounts) >= subscription['max_accounts_allowed']:
+                            logger.warning(f"Account limit reached while processing {account_id}")
+                            container_results.append({
+                                'account_id': account_id,
+                                'error': 'Account limit reached',
+                                'success': False
+                            })
+                            continue
 
-                            # First check if the trading account exists
-                            cursor.execute("SELECT account_id FROM trading_accounts WHERE account_id = %s",
-                                           (account_id,))
-                            if not cursor.fetchone():
-                                # Create the account in trading_accounts with ALL default settings
-                                cursor.execute("""
-                                        INSERT INTO trading_accounts 
-                                        (account_id, env, initial_balance, account_equity, 
-                                        daily_loss_limit_enabled, daily_loss_limit,
-                                        daily_profit_target_enabled, daily_profit_target,
-                                        weekly_profit_target_enabled, weekly_profit_target,
-                                        max_overall_profit_enabled, max_overall_profit,
-                                        max_num_of_trades_enabled, max_num_of_trades,
-                                        trading_window_enabled, trading_window_start_time, trading_window_end_time,
-                                        max_position_size_enabled, max_position_size,
-                                        lockout_enabled, lockout_until) 
-                                        VALUES (%s, %s, %s, %s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '09:00:00', '17:00:00', 0, 0, 0, NULL)
-                                    """, (account_id, account_type, account_balance, account_balance))
+                        # Find the account details in the session data
+                        account_data = next((acc for acc in tradelocker_accounts if acc['id'] == account_id), None)
 
-                            # Now link it to the user if not already linked
+                        # Extract account details if available
+                        account_balance = 0
+                        account_num = ''
+
+                        if account_data:
+                            # Parse the label to extract the balance
+                            label_parts = account_data.get('label', '').split('(')
+                            if len(label_parts) > 1:
+                                balance_part = label_parts[1].replace(')', '').split(' ')
+                                if len(balance_part) > 1:
+                                    try:
+                                        account_balance = float(balance_part[1])
+                                    except:
+                                        account_balance = 0
+                            
+                            account_num = account_data.get('acc_num', '')
+
+                        # First check if the trading account exists
+                        cursor.execute("SELECT account_id FROM trading_accounts WHERE account_id = %s", (account_id,))
+                        existing_account = cursor.fetchone()
+                        
+                        if not existing_account:
+                            # Create the account in trading_accounts with ALL default settings
                             cursor.execute("""
-                                    INSERT IGNORE INTO user_accounts (user_id, account_id) 
-                                    VALUES (%s, %s)
-                                """, (current_user.id, account_id))
+                                INSERT INTO trading_accounts 
+                                (account_id, env, initial_balance, account_equity, acc_num,
+                                daily_loss_limit_enabled, daily_loss_limit,
+                                daily_profit_target_enabled, daily_profit_target,
+                                weekly_profit_target_enabled, weekly_profit_target,
+                                max_overall_profit_enabled, max_overall_profit,
+                                max_num_of_trades_enabled, max_num_of_trades,
+                                trading_window_enabled, trading_window_start_time, trading_window_end_time,
+                                max_position_size_enabled, max_position_size,
+                                lockout_enabled, lockout_until) 
+                                VALUES (%s, %s, %s, %s, %s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '09:00:00', '17:00:00', 0, 0, 0, NULL)
+                            """, (account_id, account_type, account_balance, account_balance, account_num))
+                            logger.info(f"Created trading account record for {account_id}")
 
-                            if cursor.rowcount > 0:
-                                accounts_added += 1
-                                if account_id not in current_user.accounts:
-                                    current_user.accounts.append(account_id)
+                        # Link it to the user if not already linked
+                        cursor.execute("""
+                            INSERT IGNORE INTO user_accounts (user_id, account_id) 
+                            VALUES (%s, %s)
+                        """, (current_user.id, account_id))
 
-                        conn.commit()
-                        cursor.close()
-                        conn.close()
+                        if cursor.rowcount > 0:
+                            accounts_added += 1
+                            if account_id not in current_user.accounts:
+                                current_user.accounts.append(account_id)
 
-                        if accounts_added > 0:
-                            success_message = f"Successfully added {accounts_added} account(s)"
-                            # Clear the accounts from session
-                            session.pop('tradelocker_accounts', None)
+                        # Only start container if account was successfully added and user has subscription
+                        if cursor.rowcount > 0:
+                            logger.info(f"Starting container for account {account_id} (subscription: {subscription['plan_name']})")
+                            container_success, container_id, container_uid = start_container_for_account_enhanced(account_id)
+                            
+                            if container_success:
+                                # Update the account with container information
+                                cursor.execute("""
+                                    UPDATE trading_accounts 
+                                    SET container_id = %s, container_uid = %s 
+                                    WHERE account_id = %s
+                                """, (container_id, container_uid, account_id))
+                                
+                                container_results.append({
+                                    'account_id': account_id,
+                                    'container_id': container_id,
+                                    'success': True
+                                })
+                                logger.info(f"Container started for {account_id}: {container_id}")
+                            else:
+                                container_results.append({
+                                    'account_id': account_id,
+                                    'error': container_uid,  # container_uid contains error message on failure
+                                    'success': False
+                                })
+                                logger.error(f"Failed to start container for {account_id}: {container_uid}")
                         else:
-                            error_message = "No new accounts were added"
+                            logger.info(f"Account {account_id} already exists for user, skipping container creation")
 
-                except Error as e:
-                    error_message = f"Database error: {str(e)}"
+                    except Exception as e:
+                        logger.error(f"Error processing account {account_id}: {str(e)}")
+                        container_results.append({
+                            'account_id': account_id,
+                            'error': str(e),
+                            'success': False
+                        })
 
-    # Get accounts from session if they exist
-    if 'tradelocker_accounts' in session:
-        tradelocker_accounts = session.get('tradelocker_accounts', [])
+                conn.commit()
+                cursor.close()
+                conn.close()
 
-    # GET request - show accounts management page
-    return render_template('manage_accounts.html',
-                           error_message=error_message,
-                           success_message=success_message,
-                           tradelocker_accounts=tradelocker_accounts,
-                           subscription=subscription)
+                # Generate success/error messages
+                if accounts_added > 0:
+                    successful_containers = [r for r in container_results if r['success']]
+                    failed_containers = [r for r in container_results if not r['success']]
+                    
+                    success_parts = [f"Successfully added {accounts_added} account(s) to your {subscription['plan_name']} plan"]
+                    
+                    if successful_containers:
+                        success_parts.append(f"Started {len(successful_containers)} trading container(s)")
+                    
+                    if failed_containers:
+                        failed_accounts = [r['account_id'] for r in failed_containers]
+                        success_parts.append(f"Failed to start containers for: {', '.join(failed_accounts)}")
+                    
+                    success_message = ". ".join(success_parts)
+                    
+                    # Clear the accounts from session
+                    session.pop('tradelocker_accounts', None)
+                else:
+                    error_message = "No new accounts were added"
+
+        except Error as e:
+            error_message = f"Database error: {str(e)}"
+            logger.error(f"Database error in add_tradelocker_accounts: {str(e)}")
 
 
 @app.route('/billing')
