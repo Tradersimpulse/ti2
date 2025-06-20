@@ -15,7 +15,7 @@ from config import get_config
 # Get config
 config = get_config()
 
-# Use config for Stripe keys
+# Use config for Stripe keys - SINGLE SOURCE OF TRUTH
 stripe.api_key = config.STRIPE_SECRET_KEY
 stripe_public_key = config.STRIPE_PUBLIC_KEY
 webhook_secret = config.STRIPE_WEBHOOK_SECRET
@@ -45,12 +45,6 @@ db_config = {
     'host': os.getenv('DB_HOST', 'tradersimpulse-main.c78skiy68i07.us-east-1.rds.amazonaws.com'),
     'database': os.getenv('DB_NAME', 'tradersimpulse')
 }
-
-# Initialize Stripe - Store this key in environment variables in production
-stripe_public_key = os.getenv('STRIPE_PUBLIC_KEY')
-stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-# At the top of your app.py, make sure you have this line:
-webhook_secret = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_18xMEaKyzXWVLnThixyiQRzSM3EnhOXS')
 
 
 # Helper functions
@@ -119,27 +113,27 @@ def get_trading_settings(account_id):
         formatted_settings = {
             'daily_loss_limit': {
                 'enabled': bool(settings.get('daily_loss_limit_enabled', 0)),
-                'value': float(settings.get('daily_loss_limit') or 0),  # Changed this line
+                'value': float(settings.get('daily_loss_limit') or 0),
                 'type': 'equity-based'
             },
             'daily_profit_target': {
                 'enabled': bool(settings.get('daily_profit_target_enabled', 0)),
-                'value': float(settings.get('daily_profit_target') or 0),  # And this one
+                'value': float(settings.get('daily_profit_target') or 0),
                 'type': 'equity-based'
             },
             'weekly_profit_target': {
                 'enabled': bool(settings.get('weekly_profit_target_enabled', 0)),
-                'value': float(settings.get('weekly_profit_target') or 0),  # And this one
+                'value': float(settings.get('weekly_profit_target') or 0),
                 'type': 'equity-based'
             },
             'max_overall_profit': {
                 'enabled': bool(settings.get('max_overall_profit_enabled', 0)),
-                'value': float(settings.get('max_overall_profit') or 0),  # And this one
+                'value': float(settings.get('max_overall_profit') or 0),
                 'type': 'balance-based'
             },
             'max_trades': {
                 'enabled': bool(settings.get('max_num_of_trades_enabled', 0)),
-                'value': int(settings.get('max_num_of_trades') or 0),  # And this one
+                'value': int(settings.get('max_num_of_trades') or 0),
                 'type': 'count-based'
             },
             'trading_window': {
@@ -150,7 +144,7 @@ def get_trading_settings(account_id):
             },
             'max_position_size': {
                 'enabled': bool(settings.get('max_position_size_enabled', 0)),
-                'value': float(settings.get('max_position_size') or 0),  # And this one
+                'value': float(settings.get('max_position_size') or 0),
                 'type': 'count-based'
             },
             # Add lockout settings
@@ -1327,14 +1321,13 @@ def subscription_manage():
     # Get user's current subscription
     subscription = get_user_subscription(current_user.id)
 
-    # Hardcode the public key for testing
-    public_key = 'pk_live_51D1yDyCir8vKAFowMQ3I6ReUZQIgoyYnYIMilKAcqa11PvBXmCZObUjnIOc97Tp3O5DmNiGvswKOR0nmddiH2FoM00QXlQrW4E'
+    # Use config for public key instead of hardcoded
+    stripe_public_key = config.STRIPE_PUBLIC_KEY
 
-    # Pass hardcoded public key
     return render_template('manage_subscription.html',
                            subscription=subscription,
                            plans=SUBSCRIPTION_PLANS,
-                           stripe_public_key=public_key)
+                           stripe_public_key=stripe_public_key)
 
 
 @app.route('/create-checkout-session', methods=['POST'])
@@ -1342,7 +1335,10 @@ def subscription_manage():
 def create_checkout_session():
     """Create a Stripe checkout session for subscription purchase"""
     try:
-        stripe.api_key = config.STRIPE_SECRET_KEY or os.getenv('STRIPE_SECRET_KEY')
+        # Stripe API key is already set at the top of the file
+        logger.info(f"Creating checkout for user {current_user.id}")
+        logger.info(f"Using Stripe key: {stripe.api_key[:7] if stripe.api_key else 'None'}...")
+        
         plan_id = request.form.get('plan_id')
         is_annual = request.form.get('is_annual') == 'true'
 
@@ -1358,9 +1354,7 @@ def create_checkout_session():
         logger.info(f"Creating checkout session for plan: {plan['name']}, price: {price_id}")
 
         # Make sure customer email is set
-        customer_email = current_user.email
-        if not customer_email:
-            customer_email = "customer@example.com"  # Fallback for testing
+        customer_email = current_user.email or "customer@example.com"
 
         checkout_session = stripe.checkout.Session.create(
             customer_email=customer_email,
@@ -1377,7 +1371,10 @@ def create_checkout_session():
                 'max_accounts': plan['max_accounts_allowed']
             }
         )
+        
+        logger.info(f"Checkout session created: {checkout_session.id}")
         return jsonify({"id": checkout_session.id})
+        
     except Exception as e:
         logger.error(f"Error creating checkout session: {str(e)}")
         return jsonify(error=str(e)), 500
@@ -1659,7 +1656,6 @@ def user_settings():
                     logger.error(f"Database error changing password: {str(e)}")
 
         # Handle Timezone Update
-        # For the timezone update section:
         elif action == 'update_timezone':
             timezone = request.form.get('timezone', 'UTC')
 
@@ -1812,7 +1808,7 @@ def webhook():
 
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, webhook_secret  # This is the line with the error
+            payload, sig_header, webhook_secret
         )
     except ValueError as e:
         # Invalid payload
@@ -2082,3 +2078,9 @@ def setup_database():
     """Setup database tables and initial data"""
     create_tables()
     initialize_plans()
+
+
+if __name__ == '__main__':
+    # Setup database on startup
+    setup_database()
+    app.run(debug=True)
