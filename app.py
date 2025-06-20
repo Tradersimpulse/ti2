@@ -1541,7 +1541,112 @@ def subscription_resume():
         logger.error(f"Error resuming subscription: {str(e)}")
         return jsonify({"success": False, "error": str(e)})
 
+def stop_container_for_account(account_id):
+    """Stop and remove container for a trading account"""
+    try:
+        conn = get_connection()
+        if not conn:
+            return False, "Database connection failed"
 
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT container_id, container_uid FROM trading_accounts WHERE account_id = %s", (account_id,))
+        container_info = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not container_info or not container_info.get('container_id'):
+            return True, "No container found to stop"
+
+        container_id = container_info['container_id']
+        
+        # Call your container management API to stop the container
+        response = requests.post(
+            "http://ec2-54-90-118-183.compute-1.amazonaws.com:5000/stop",
+            json={"container_id": container_id},
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            logger.info(f"Successfully stopped container {container_id} for account {account_id}")
+            
+            # Clear container info from database
+            conn = get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE trading_accounts 
+                    SET container_id = NULL, container_uid = NULL 
+                    WHERE account_id = %s
+                """, (account_id,))
+                conn.commit()
+                cursor.close()
+                conn.close()
+            
+            return True, f"Container {container_id} stopped successfully"
+        else:
+            logger.error(f"Failed to stop container {container_id}: {response.text}")
+            return False, f"Failed to stop container: {response.text}"
+
+    except Exception as e:
+        logger.error(f"Error stopping container for account {account_id}: {str(e)}")
+        return False, f"Error stopping container: {str(e)}"
+
+
+# Add this route to your app.py
+
+@app.route('/remove_account', methods=['POST'])
+@login_required
+def remove_account():
+    """Remove a trading account and stop its container"""
+    account_id = request.form.get('account_id')
+    
+    if not account_id:
+        return jsonify({"success": False, "error": "Account ID is required"})
+    
+    # Verify this account belongs to the user
+    if account_id not in current_user.accounts:
+        return jsonify({"success": False, "error": "Account not found or access denied"})
+    
+    # Don't allow removing the last account
+    if len(current_user.accounts) <= 1:
+        return jsonify({"success": False, "error": "Cannot remove your last account"})
+    
+    try:
+        # Stop the container first
+        container_stopped, container_message = stop_container_for_account(account_id)
+        
+        # Remove from user_accounts table
+        conn = get_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM user_accounts WHERE user_id = %s AND account_id = %s",
+                (current_user.id, account_id)
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            # Update current user's accounts list
+            current_user.accounts.remove(account_id)
+            
+            # If we removed the current account, switch to another
+            if current_user.current_account_id == account_id:
+                current_user.current_account_id = current_user.accounts[0]
+                session['current_account_id'] = current_user.current_account_id
+            
+            return jsonify({
+                "success": True, 
+                "message": f"Account removed successfully. {container_message}",
+                "redirect": url_for('manage_accounts')
+            })
+        else:
+            return jsonify({"success": False, "error": "Database connection failed"})
+            
+    except Exception as e:
+        logger.error(f"Error removing account {account_id}: {str(e)}")
+        return jsonify({"success": False, "error": f"Error removing account: {str(e)}"})
+        
 @app.route('/user_settings', methods=['GET', 'POST'])
 @login_required
 def user_settings():
