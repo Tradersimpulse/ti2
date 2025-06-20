@@ -1342,9 +1342,7 @@ def subscription_manage():
 def create_checkout_session():
     """Create a Stripe checkout session for subscription purchase"""
     try:
-        # Set the API key directly in this function for testing
-        stripe.api_key = 'STRIPE_SECRET_KEY'
-
+        stripe.api_key = config.STRIPE_SECRET_KEY or os.getenv('STRIPE_SECRET_KEY')
         plan_id = request.form.get('plan_id')
         is_annual = request.form.get('is_annual') == 'true'
 
