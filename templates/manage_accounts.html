@@ -149,7 +149,6 @@
                                         <button type="submit" class="btn btn-sm btn-outline-primary">Set Default</button>
                                     </form>
 
-                                    {% if current_user.accounts|length > 1 %}
                                     <button type="button" 
                                             class="btn btn-sm btn-danger btn-remove" 
                                             onclick="removeAccount('{{ account_id }}')"
@@ -157,7 +156,6 @@
                                             id="remove-btn-{{ account_id }}">
                                         <i class="fas fa-times"></i>
                                     </button>
-                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
