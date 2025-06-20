@@ -1396,8 +1396,8 @@ def subscription_success():
         conn = get_connection()
         cursor = conn.cursor()
 
-        # Find the plan based on price_id
-        price_id = subscription.items.data[0].price.id
+        # Find the plan based on price_id - Fixed the data access
+        price_id = subscription['items']['data'][0]['price']['id']
         cursor.execute("""
             SELECT id FROM plans 
             WHERE stripe_monthly_price_id = %s OR stripe_annual_price_id = %s
@@ -1405,7 +1405,9 @@ def subscription_success():
         plan_result = cursor.fetchone()
 
         if not plan_result:
+            cursor.close()
             conn.close()
+            logger.error(f"Plan not found for price_id: {price_id}")
             return "Error: Plan not found", 500
 
         plan_id = plan_result[0]
@@ -1430,12 +1432,15 @@ def subscription_success():
         cursor.close()
         conn.close()
 
+        logger.info(f"Successfully created subscription for user {current_user.id}")
+        
         # Redirect to dashboard with success message
         flash("Subscription successful! Your account has been upgraded.")
         return redirect(url_for('dashboard'))
 
     except Exception as e:
         logger.error(f"Error processing subscription: {str(e)}")
+        logger.error(f"Session ID: {session_id}")
         flash(f"Error processing subscription: {str(e)}")
         return redirect(url_for('dashboard'))
 
