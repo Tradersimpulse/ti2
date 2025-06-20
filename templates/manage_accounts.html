@@ -53,6 +53,45 @@
     .btn-primary:hover {
         background-color: #2d73e8;
     }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border: none;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .btn-remove {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+
+    .btn-remove:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .remove-loading {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
@@ -103,22 +142,23 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <form method="post" class="d-inline">
-                                    <input type="hidden" name="action" value="set_default">
-                                    <input type="hidden" name="account_id" value="{{ account_id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">Set Default</button>
-                                </form>
+                                <div class="action-buttons">
+                                    <form method="post" class="d-inline">
+                                        <input type="hidden" name="action" value="set_default">
+                                        <input type="hidden" name="account_id" value="{{ account_id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Set Default</button>
+                                    </form>
 
-                                {% if current_user.accounts|length > 1 %}
-                                <form method="post" class="d-inline">
-                                    <input type="hidden" name="action" value="remove">
-                                    <input type="hidden" name="account_id" value="{{ account_id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                           onclick="return confirm('Are you sure you want to remove this account?')">
-                                        Remove
+                                    {% if current_user.accounts|length > 1 %}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger btn-remove" 
+                                            onclick="removeAccount('{{ account_id }}')"
+                                            title="Remove account and stop container"
+                                            id="remove-btn-{{ account_id }}">
+                                        <i class="fas fa-times"></i>
                                     </button>
-                                </form>
-                                {% endif %}
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -131,6 +171,36 @@
         </div>
     </div>
 
+    <!-- Subscription Info -->
+    <div class="col-md-5">
+        <div class="card bg-dark border-secondary mb-4">
+            <div class="card-header border-secondary">
+                <h5 class="card-title mb-0">Account Limits</h5>
+            </div>
+            <div class="card-body">
+                {% if subscription %}
+                <p><strong>Plan:</strong> {{ subscription.plan_name }}</p>
+                <p><strong>Max Accounts:</strong> {{ subscription.max_accounts_allowed }}</p>
+                <p><strong>Current Accounts:</strong> {{ current_user.accounts|length }}</p>
+                <div class="progress mb-2">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ (current_user.accounts|length / subscription.max_accounts_allowed * 100)|round }}%"
+                         aria-valuenow="{{ current_user.accounts|length }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="{{ subscription.max_accounts_allowed }}">
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <h6>No Active Subscription</h6>
+                    <p class="mb-2">You need an active subscription to add more accounts.</p>
+                    <a href="{{ url_for('subscription_manage') }}" class="btn btn-primary btn-sm">Subscribe Now</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- TradeLocker Integration -->
 <div class="row mt-2">
@@ -209,4 +279,67 @@
         </div>
     </div>
 </div>
+
+<script>
+function removeAccount(accountId) {
+    // Show confirmation dialog with detailed warning
+    const confirmMessage = `Are you sure you want to remove account ${accountId}?\n\nThis will:\n• Stop the associated trading container\n• Remove all trading protections\n• Cannot be undone\n\nContinue?`;
+    
+    if (confirm(confirmMessage)) {
+        // Get the button and show loading state
+        const button = document.getElementById(`remove-btn-${accountId}`);
+        const originalHTML = button.innerHTML;
+        
+        // Show loading state
+        button.innerHTML = '<i class="fas fa-spinner remove-loading"></i>';
+        button.disabled = true;
+        
+        // Send remove request
+        fetch('/remove_account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `account_id=${encodeURIComponent(accountId)}`
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                alert(data.message || 'Account removed successfully');
+                
+                // Reload the page to reflect changes
+                window.location.reload();
+            } else {
+                // Show error message
+                alert('Error: ' + (data.error || 'Unknown error occurred'));
+                
+                // Restore button state
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Network error occurred. Please try again.');
+            
+            // Restore button state
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        });
+    }
+}
+
+// Add CSRF token to requests if you're using CSRF protection
+function getCSRFToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '';
+}
+</script>
 {% endblock %}
