@@ -64,18 +64,40 @@
     }
 
     .btn-remove {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 6px;
+        border-radius: 8px;
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: #dc3545;
+        transition: all 0.2s ease;
+    }
+
+    .btn-remove:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-remove:active {
+        transform: translateY(0);
     }
 
     .btn-remove:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .btn-remove i {
+        font-size: 14px;
     }
 
     .action-buttons {
@@ -150,11 +172,11 @@
                                     </form>
 
                                     <button type="button" 
-                                            class="btn btn-sm btn-danger btn-remove" 
+                                            class="btn btn-remove" 
                                             onclick="removeAccount('{{ account_id }}')"
                                             title="Remove account and stop container"
                                             id="remove-btn-{{ account_id }}">
-                                        <i class="fas fa-times"></i>
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
                             </td>
