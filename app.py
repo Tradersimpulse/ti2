@@ -728,10 +728,6 @@ def signup():
                 VALUES (%s, %s, %s, %s)
             """, (account_id, 'demo', 10000.00, 10000.00))
 
-            # Start container for the new account
-            start_container_for_account(account_id)
-
-
             # Link the account to the user
             cursor.execute("""
                 INSERT INTO user_accounts 
