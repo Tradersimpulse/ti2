@@ -395,6 +395,56 @@ def handle_subscription_updated(subscription):
         logger.error(f"Error handling subscription update: {str(e)}")
         return False
 
+def start_container_for_account_enhanced(account_id):
+    """
+    Start container for account and return container info
+    Returns: (success: bool, container_id: str, container_uid: str)
+    """
+    try:
+        logger.info(f"Requesting container start for account {account_id}")
+        
+        response = requests.post(
+            "http://ec2-54-90-118-183.compute-1.amazonaws.com:5000/start",
+            json={"image": "trading-conditions"},
+            timeout=60
+        )
+
+        logger.info(f"Container API response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"Container API response data: {data}")
+            
+            full_container_id = data.get("container_id")
+            container_uid = data.get("uid")
+
+            if not full_container_id:
+                logger.error("No container_id in API response")
+                return False, None, "No container_id returned from API"
+
+            # Take first 12 characters of container_id
+            container_id = full_container_id[:12]
+            
+            logger.info(f"Container created - Full ID: {full_container_id}, Short ID: {container_id}, UID: {container_uid}")
+            
+            return True, container_id, container_uid
+        else:
+            error_msg = f"Container API error: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            return False, None, error_msg
+
+    except requests.exceptions.Timeout:
+        error_msg = "Container creation timed out after 60 seconds"
+        logger.error(error_msg)
+        return False, None, error_msg
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Network error creating container: {str(e)}"
+        logger.error(error_msg)
+        return False, None, error_msg
+    except Exception as e:
+        error_msg = f"Unexpected error creating container: {str(e)}"
+        logger.error(error_msg)
+        return False, None, error_msg
 
 def handle_subscription_deleted(subscription):
     """Handle subscription deletion events from Stripe webhook"""
