@@ -11,9 +11,7 @@ import stripe
 import logging
 import requests
 from config import get_config
-
-# Get config
-config = get_config()
+config = get_config()()
 
 # Use config for Stripe keys - SINGLE SOURCE OF TRUTH
 stripe.api_key = config.STRIPE_SECRET_KEY
@@ -2310,7 +2308,18 @@ def setup_database():
     initialize_plans()
 
 
+
 if __name__ == '__main__':
-    # Setup database on startup
-    setup_database()
-    app.run(debug=True)
+    # Setup database on startup - make it resilient
+    try:
+        setup_database()
+        logger.info("Database setup completed successfully")
+    except Exception as e:
+        logger.error(f"Database setup failed: {e}")
+        # Don't crash the app, just log the error
+        
+    # Get port from environment variable (Heroku provides this)
+    port = int(os.environ.get('PORT', 5000))
+    
+    # Run the app
+    app.run(host='0.0.0.0', port=port, debug=False)
