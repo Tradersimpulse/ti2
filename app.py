@@ -2191,6 +2191,16 @@ def setup_database():
 
 
 if __name__ == '__main__':
-    # Setup database on startup
-    setup_database()
-    app.run(debug=True)
+    # Setup database on startup - make it resilient
+    try:
+        setup_database()
+        logger.info("Database setup completed successfully")
+    except Exception as e:
+        logger.error(f"Database setup failed: {e}")
+        # Don't crash the app, just log the error
+        
+    # Get port from environment variable (Heroku provides this)
+    port = int(os.environ.get('PORT', 5000))
+    
+    # Run the app
+    app.run(host='0.0.0.0', port=port, debug=False)
