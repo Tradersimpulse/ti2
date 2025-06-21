@@ -83,7 +83,57 @@ def get_account_info(account_id):
             conn.close()
         return {}
 
+def start_container_for_account_enhanced(account_id):
+    """
+    Start container for account and return container info
+    Returns: (success: bool, container_id: str, container_uid: str)
+    """
+    try:
+        logger.info(f"Requesting container start for account {account_id}")
+        
+        response = requests.post(
+            "http://ec2-54-90-118-183.compute-1.amazonaws.com:5000/start",
+            json={"image": "trading-conditions"},
+            timeout=60  # Increased timeout for container creation
+        )
 
+        logger.info(f"Container API response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"Container API response data: {data}")
+            
+            full_container_id = data.get("container_id")
+            container_uid = data.get("uid")
+
+            if not full_container_id:
+                logger.error("No container_id in API response")
+                return False, None, "No container_id returned from API"
+
+            # Take first 12 characters of container_id
+            container_id = full_container_id[:12]
+            
+            logger.info(f"Container created - Full ID: {full_container_id}, Short ID: {container_id}, UID: {container_uid}")
+            
+            return True, container_id, container_uid
+        else:
+            error_msg = f"Container API error: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            return False, None, error_msg
+
+    except requests.exceptions.Timeout:
+        error_msg = "Container creation timed out after 60 seconds"
+        logger.error(error_msg)
+        return False, None, error_msg
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Network error creating container: {str(e)}"
+        logger.error(error_msg)
+        return False, None, error_msg
+    except Exception as e:
+        error_msg = f"Unexpected error creating container: {str(e)}"
+        logger.error(error_msg)
+        return False, None, error_msg
+        
 def get_trading_settings(account_id):
     try:
         conn = get_connection()
@@ -395,56 +445,6 @@ def handle_subscription_updated(subscription):
         logger.error(f"Error handling subscription update: {str(e)}")
         return False
 
-def start_container_for_account_enhanced(account_id):
-    """
-    Start container for account and return container info
-    Returns: (success: bool, container_id: str, container_uid: str)
-    """
-    try:
-        logger.info(f"Requesting container start for account {account_id}")
-        
-        response = requests.post(
-            "http://ec2-54-90-118-183.compute-1.amazonaws.com:5000/start",
-            json={"image": "trading-conditions"},
-            timeout=60
-        )
-
-        logger.info(f"Container API response status: {response.status_code}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            logger.info(f"Container API response data: {data}")
-            
-            full_container_id = data.get("container_id")
-            container_uid = data.get("uid")
-
-            if not full_container_id:
-                logger.error("No container_id in API response")
-                return False, None, "No container_id returned from API"
-
-            # Take first 12 characters of container_id
-            container_id = full_container_id[:12]
-            
-            logger.info(f"Container created - Full ID: {full_container_id}, Short ID: {container_id}, UID: {container_uid}")
-            
-            return True, container_id, container_uid
-        else:
-            error_msg = f"Container API error: {response.status_code} - {response.text}"
-            logger.error(error_msg)
-            return False, None, error_msg
-
-    except requests.exceptions.Timeout:
-        error_msg = "Container creation timed out after 60 seconds"
-        logger.error(error_msg)
-        return False, None, error_msg
-    except requests.exceptions.RequestException as e:
-        error_msg = f"Network error creating container: {str(e)}"
-        logger.error(error_msg)
-        return False, None, error_msg
-    except Exception as e:
-        error_msg = f"Unexpected error creating container: {str(e)}"
-        logger.error(error_msg)
-        return False, None, error_msg
 
 def handle_subscription_deleted(subscription):
     """Handle subscription deletion events from Stripe webhook"""
@@ -1260,10 +1260,19 @@ def manage_accounts():
     selected_accounts = request.form.getlist('selected_accounts')
     account_type = session.get('tradelocker_env', 'demo')
 
+    # Check if user has a subscription first
+    if not subscription:
+        error_message = "You need an active subscription to add accounts and start containers. Please subscribe to a plan first."
+        return render_template('manage_accounts.html',
+                               error_message=error_message,
+                               success_message=None,
+                               tradelocker_accounts=tradelocker_accounts,
+                               subscription=None)
+
     # Check account limit before adding
     current_count = len(current_user.accounts)
-    if subscription and current_count + len(selected_accounts) > subscription['max_accounts_allowed']:
-        error_message = f"Adding these accounts would exceed your plan limit of {subscription['max_accounts_allowed']} accounts."
+    if current_count + len(selected_accounts) > subscription['max_accounts_allowed']:
+        error_message = f"Adding these accounts would exceed your plan limit of {subscription['max_accounts_allowed']} accounts. You currently have {current_count} accounts and are trying to add {len(selected_accounts)} more."
         return render_template('manage_accounts.html',
                                error_message=error_message,
                                success_message=None,
@@ -1280,13 +1289,25 @@ def manage_accounts():
                 accounts_added = 0
                 container_results = []
 
+                # Log subscription info for debugging
+                logger.info(f"User {current_user.id} has {subscription['plan_name']} plan with {subscription['max_accounts_allowed']} max accounts")
+                logger.info(f"Current accounts: {current_count}, Adding: {len(selected_accounts)}, Total will be: {current_count + len(selected_accounts)}")
+
                 # Get the accounts from session
                 tradelocker_accounts = session.get('tradelocker_accounts', [])
 
                 for account_id in selected_accounts:
                     try:
-                        logger.info(f"Processing account: {account_id}")
-                        
+                        # Double-check we haven't exceeded limits during processing
+                        if len(current_user.accounts) >= subscription['max_accounts_allowed']:
+                            logger.warning(f"Account limit reached while processing {account_id}")
+                            container_results.append({
+                                'account_id': account_id,
+                                'error': 'Account limit reached',
+                                'success': False
+                            })
+                            continue
+
                         # Find the account details in the session data
                         account_data = next((acc for acc in tradelocker_accounts if acc['id'] == account_id), None)
 
@@ -1304,6 +1325,7 @@ def manage_accounts():
                                         account_balance = float(balance_part[1])
                                     except:
                                         account_balance = 0
+                            
                             account_num = account_data.get('acc_num', '')
 
                         # First check if the trading account exists
@@ -1312,7 +1334,6 @@ def manage_accounts():
                         
                         if not existing_account:
                             # Create the account in trading_accounts with ALL default settings
-                            logger.info(f"Creating new trading account for {account_id}")
                             cursor.execute("""
                                 INSERT INTO trading_accounts 
                                 (account_id, env, initial_balance, account_equity, acc_num,
@@ -1326,12 +1347,7 @@ def manage_accounts():
                                 lockout_enabled, lockout_until) 
                                 VALUES (%s, %s, %s, %s, %s, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '09:00:00', '17:00:00', 0, 0, 0, NULL)
                             """, (account_id, account_type, account_balance, account_balance, account_num))
-                            
-                            if cursor.rowcount > 0:
-                                logger.info(f"Successfully created trading account for {account_id}")
-                            else:
-                                logger.error(f"Failed to create trading account for {account_id}")
-                                continue
+                            logger.info(f"Created trading account record for {account_id}")
 
                         # Link it to the user if not already linked
                         cursor.execute("""
@@ -1343,22 +1359,13 @@ def manage_accounts():
                             accounts_added += 1
                             if account_id not in current_user.accounts:
                                 current_user.accounts.append(account_id)
-                            logger.info(f"Successfully linked account {account_id} to user {current_user.id}")
 
-                        # **CRITICAL FIX**: Commit the account creation BEFORE starting container
-                        conn.commit()
-                        logger.info(f"Database changes committed for account {account_id}")
-
-                        # Now start container - ONLY if account was successfully added
-                        logger.info(f"Starting container for account {account_id}")
-                        container_success, container_id, container_uid = start_container_for_account_enhanced(account_id)
-                        
-                        if container_success:
-                            logger.info(f"Container created successfully: {container_id}, UID: {container_uid}")
+                        # Only start container if account was successfully added and user has subscription
+                        if cursor.rowcount > 0:
+                            logger.info(f"Starting container for account {account_id} (subscription: {subscription['plan_name']})")
+                            container_success, container_id, container_uid = start_container_for_account_enhanced(account_id)
                             
-                            # **CRITICAL FIX**: Verify account exists before updating container info
-                            cursor.execute("SELECT account_id FROM trading_accounts WHERE account_id = %s", (account_id,))
-                            if cursor.fetchone():
+                            if container_success:
                                 # Update the account with container information
                                 cursor.execute("""
                                     UPDATE trading_accounts 
@@ -1366,52 +1373,30 @@ def manage_accounts():
                                     WHERE account_id = %s
                                 """, (container_id, container_uid, account_id))
                                 
-                                rows_affected = cursor.rowcount
-                                logger.info(f"Container update affected {rows_affected} rows for account {account_id}")
-                                
-                                if rows_affected > 0:
-                                    # Commit the container update immediately
-                                    conn.commit()
-                                    logger.info(f"Container info successfully saved for account {account_id}")
-                                    
-                                    container_results.append({
-                                        'account_id': account_id,
-                                        'container_id': container_id,
-                                        'success': True
-                                    })
-                                else:
-                                    logger.error(f"Failed to update container info for account {account_id} - no rows affected")
-                                    container_results.append({
-                                        'account_id': account_id,
-                                        'error': 'Database update failed',
-                                        'success': False
-                                    })
-                            else:
-                                logger.error(f"Account {account_id} not found when trying to update container info")
                                 container_results.append({
                                     'account_id': account_id,
-                                    'error': 'Account not found for container update',
+                                    'container_id': container_id,
+                                    'success': True
+                                })
+                                logger.info(f"Container started for {account_id}: {container_id}")
+                            else:
+                                container_results.append({
+                                    'account_id': account_id,
+                                    'error': container_uid,  # container_uid contains error message on failure
                                     'success': False
                                 })
+                                logger.error(f"Failed to start container for {account_id}: {container_uid}")
                         else:
-                            logger.error(f"Failed to start container for {account_id}: {container_uid}")
-                            container_results.append({
-                                'account_id': account_id,
-                                'error': f"Container creation failed: {container_uid}",
-                                'success': False
-                            })
+                            logger.info(f"Account {account_id} already exists for user, skipping container creation")
 
                     except Exception as e:
-                        logger.error(f"Error processing account {account_id}: {str(e)}", exc_info=True)
+                        logger.error(f"Error processing account {account_id}: {str(e)}")
                         container_results.append({
                             'account_id': account_id,
                             'error': str(e),
                             'success': False
                         })
-                        # Rollback this account's changes
-                        conn.rollback()
 
-                # Final commit for any remaining changes
                 conn.commit()
                 cursor.close()
                 conn.close()
@@ -1421,14 +1406,14 @@ def manage_accounts():
                     successful_containers = [r for r in container_results if r['success']]
                     failed_containers = [r for r in container_results if not r['success']]
                     
-                    success_parts = [f"Successfully added {accounts_added} account(s)"]
+                    success_parts = [f"Successfully added {accounts_added} account(s) to your {subscription['plan_name']} plan"]
                     
                     if successful_containers:
-                        success_parts.append(f"Started {len(successful_containers)} trading container(s) with saved info")
+                        success_parts.append(f"Started {len(successful_containers)} trading container(s)")
                     
                     if failed_containers:
                         failed_accounts = [r['account_id'] for r in failed_containers]
-                        success_parts.append(f"Failed containers: {', '.join(failed_accounts)}")
+                        success_parts.append(f"Failed to start containers for: {', '.join(failed_accounts)}")
                     
                     success_message = ". ".join(success_parts)
                     
@@ -1439,18 +1424,7 @@ def manage_accounts():
 
         except Error as e:
             error_message = f"Database error: {str(e)}"
-            logger.error(f"Database error in add_tradelocker_accounts: {str(e)}", exc_info=True)
-
-    # Get accounts from session if they exist
-    if 'tradelocker_accounts' in session:
-        tradelocker_accounts = session.get('tradelocker_accounts', [])
-
-    # GET request - show accounts management page
-    return render_template('manage_accounts.html',
-                           error_message=error_message,
-                           success_message=success_message,
-                           tradelocker_accounts=tradelocker_accounts,
-                           subscription=subscription)
+            logger.error(f"Database error in add_tradelocker_accounts: {str(e)}")
 
 
 @app.route('/billing')
@@ -2337,16 +2311,6 @@ def setup_database():
 
 
 if __name__ == '__main__':
-    # Setup database on startup - make it resilient
-    try:
-        setup_database()
-        logger.info("Database setup completed successfully")
-    except Exception as e:
-        logger.error(f"Database setup failed: {e}")
-        # Don't crash the app, just log the error
-        
-    # Get port from environment variable (Heroku provides this)
-    port = int(os.environ.get('PORT', 5000))
-    
-    # Run the app
-    app.run(host='0.0.0.0', port=port, debug=False)
+    # Setup database on startup
+    setup_database()
+    app.run(debug=True)
